@@ -1,0 +1,50 @@
+.indicators {
+  padding: 1.5rem;
+}
+
+.indicator {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem;
+  margin: 0.5rem 0;
+  border-radius: 0.5rem;
+  background: #f3f4f6;
+}
+
+.indicator.warning,
+.indicator.high {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.indicator .label {
+  font-weight: 600;
+  min-width: 100px;
+}
+
+.indicator .value {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.indicator .status {
+  margin-left: auto;
+  font-size: 0.875rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  background: #e5e7eb;
+}
+
+.indicator.warning .status,
+.indicator.high .status {
+  background: #dc2626;
+  color: white;
+}
+
+.update-time {
+  margin-top: 1rem;
+  font-size: 0.875rem;
+  color: #6b7280;
+  text-align: right;
+}

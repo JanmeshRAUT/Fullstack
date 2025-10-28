@@ -1,0 +1,85 @@
+.fatigue-status {
+  padding: 1.5rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.fatigue-indicator {
+  margin-top: 1rem;
+}
+
+.level-bars {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 1rem;
+}
+
+.level-bar {
+  flex: 1;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  opacity: 0.5;
+  transition: all 0.3s ease;
+}
+
+.level-bar.active {
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+.level-bar.low {
+  background-color: #22c55e;
+  color: white;
+}
+
+.level-bar.medium {
+  background-color: #f59e0b;
+  color: white;
+}
+
+.level-bar.high {
+  background-color: #ef4444;
+  color: white;
+}
+
+.current-status {
+  text-align: center;
+  font-size: 1.25rem;
+  margin-top: 1rem;
+}
+
+.status-text {
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 9999px;
+}
+
+.status-text.low {
+  color: #22c55e;
+  background: #dcfce7;
+}
+
+.status-text.medium {
+  color: #f59e0b;
+  background: #fef3c7;
+}
+
+.status-text.high {
+  color: #ef4444;
+  background: #fee2e2;
+}
+
+.status-reason {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  text-align: center;
+  color: #64748b;
+  font-size: 0.875rem;
+}

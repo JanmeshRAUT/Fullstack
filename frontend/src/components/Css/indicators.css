@@ -1,0 +1,32 @@
+.warning {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+.temp-status {
+  font-size: 0.875rem;
+  margin-left: 8px;
+  font-style: italic;
+}
+
+.status-reason {
+  margin-top: 8px;
+  font-size: 0.875rem;
+  color: #666;
+  font-style: italic;
+}
+
+.fatigue-status.high {
+  background-color: #fee2e2;
+  border-color: #ef4444;
+}
+
+.fatigue-status.medium {
+  background-color: #fef3c7;
+  border-color: #f59e0b;
+}
+
+.fatigue-status.low {
+  background-color: #dcfce7;
+  border-color: #10b981;
+}

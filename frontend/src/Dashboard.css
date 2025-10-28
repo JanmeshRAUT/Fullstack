@@ -1,0 +1,346 @@
+/* === GLOBAL STYLES === */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Inter", "Segoe UI", sans-serif;
+  background-color: #f4f7fb;
+  color: #1e293b;
+}
+.main-heading {
+    font-size: 2.25rem;
+    line-height: 2.5rem; 
+    font-weight: 800; 
+    letter-spacing: -0.025em; 
+    border-bottom: 2px solid #C7D2FE; 
+    padding-bottom: 0.75rem; 
+    margin-bottom: 1rem; 
+}
+
+.left-section,
+.right-section {
+  display: flex;
+  flex-direction: column;
+  flex: 3.2;
+
+}
+
+.left-section h2{
+   font-size: 1.5rem; 
+  line-height: 2rem; 
+  font-weight: 700; 
+  color: #0f172a;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 4px;
+
+}.right-section h2 {
+  text-align: center;
+  font-size: 1.5rem;
+  line-height: 2rem; 
+  font-weight: 700; 
+  color: #0f172a;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 4px;
+}
+
+
+.right-section {
+  flex: 1;
+  margin-left: 20px; /* keeps a nice gap from left side */
+}
+
+.dashboard {
+  padding: 20px 40px;
+}
+
+h2 {
+  font-size: 1.8rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #0f172a;
+}
+.class-heading #h2 {
+  font-size: 1.6rem;
+  font-weight: 600;
+  margin-bottom: 14px;
+  margin-top: 40px; /* adds nice spacing between sections */
+  color: #0f172a;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 4px;
+}
+
+
+.subtitle {
+  color: #64748b;
+  font-size: 0.95rem;
+  margin-bottom: 24px;
+}
+
+/* === MAIN GRID === */
+.main-grid {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.sensor-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-gap: 20px;
+  flex: 3;
+  width: 100%;
+}
+
+.ml-module {
+  flex: 1.2;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: 100%;
+}
+
+/* === CARD DESIGN === */
+.card {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 16px 18px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); 
+  transition: all 0.2s ease;
+}
+
+.card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.card h4 {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+  color: #0f172a;
+  font-weight: 600;
+  display: flex;
+  flex-direction: row;
+}
+
+
+/* === CAMERA MODULE === */
+.camera {
+  background: #0f172a;
+  color: #fff;
+  padding: 20px;
+  text-align: center;
+}
+.camera-feed{
+  width: 100%;
+  height: 120%;
+  border-radius: 12px;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+.camera h4 {
+  color: #fff;
+  margin-bottom: 12px;
+}
+
+.camera-box {
+  display: flex; 
+  padding: 1rem; 
+  flex-direction: column; 
+  justify-content: center; 
+  align-items: center; 
+  border-radius: 0.75rem; 
+  height: 13rem; 
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); 
+}
+
+.camera-icon {
+  font-size: 36px;
+  margin-bottom: 6px;
+}
+
+/* === FATIGUE STATUS === */
+.fatigue-status-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: 14px;
+  padding: 16px 25px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  font-family: "Inter", sans-serif;
+  transition: all 0.25s ease;
+}
+
+.fatigue-status-card .left-icon,
+.fatigue-status-card .right-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fatigue-status-card .status-texts {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+}
+
+.fatigue-status-card .label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #64748b;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+.fatigue-status-card .level {
+  font-size: 1.4rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* === COLOR VARIANTS === */
+.fatigue-status-card.low {
+  background-color: #f0fdf4;
+  border-left: 6px solid #16a34a;
+  color: #166534;
+}
+
+.fatigue-status-card.medium {
+  background-color: #fff9e6;
+  border-left: 6px solid #eab308;
+  color: #92400e;
+}
+
+.fatigue-status-card.high {
+  background-color: #fef2f2;
+  border-left: 6px solid #dc2626;
+  color: #b91c1c;
+}
+
+.fatigue-status-card.unknown {
+  background-color: #f1f5f9;
+  border-left: 6px solid #94a3b8;
+  color: #334155;
+}
+
+/* === DROWSINESS INDICATORS === */
+.indicators {
+  background: #fff;
+}
+
+.indicators h4 {
+  margin-bottom: 12px;
+}
+
+.indicators p {
+  margin: 8px 0;
+  font-size: 0.95rem;
+  color: #1e293b;
+}
+
+.status-label {
+  font-size: 1.1rem;
+  padding: 6px 14px;
+  border-radius: 10px;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.fatigue-status.low {
+  background: #e8fdf2;
+  border-left: 6px solid #16a34a;
+  color: #166534;
+}
+
+.fatigue-status.medium {
+  background: #fff3cd;
+  border-left: 6px solid #ffb020;
+  color: #9a6700;
+}
+
+.fatigue-status.high {
+  background: #fde8e8;
+  border-left: 6px solid #dc2626;
+  color: #b91c1c;
+}
+
+/* === RESPONSIVE DESIGN === */
+/* === RESPONSIVE ENHANCEMENTS (Tablet + Mobile Only) === */
+
+/* For tablets and small laptops */
+@media (max-width: 1024px) {
+  .main-grid {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .right-section {
+    margin-left: 0;
+    margin-top: 20px;
+  }
+
+  .sensor-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .ml-module {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .fatigue-status-card {
+    padding: 14px 18px;
+  }
+}
+
+/* For mobile devices */
+@media (max-width: 600px) {
+  .dashboard {
+    padding: 12px;
+  }
+
+  .main-heading {
+    font-size: 1.6rem;
+    line-height: 2.5rem; 
+    font-weight: 800; 
+    letter-spacing: -0.025em;
+  }
+
+  .sensor-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ml-module {
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .right-section,
+  .left-section {
+    margin: 0;
+  }
+
+  .card {
+    padding: 12px 14px;
+  }
+
+  .fatigue-status-card {
+    flex-direction: column;
+    text-align: center;
+    gap: 8px;
+  }
+
+  .fatigue-status-card .label {
+    font-size: 0.8rem;
+  }
+
+  .fatigue-status-card .level {
+    font-size: 1.2rem;
+  }
+}
+
