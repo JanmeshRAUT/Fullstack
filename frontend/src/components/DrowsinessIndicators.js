@@ -1,12 +1,12 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { CheckCircle, AlertTriangle, XCircle } from "lucide-react";
 import { useFatigueData } from "../hooks/useFatigueData";
-import "./Css/DrowsinessIndicators.css"; // your posted CSS file
+import "./Css/DrowsinessIndicators.css"; // your CSS
 
 const THRESHOLDS = {
   TEMP_HIGH: 38.0,
-  PERCLOS_MEDIUM: 25,
-  PERCLOS_HIGH: 50,
+  PERCLOS_MEDIUM: 33,
+  PERCLOS_HIGH: 75,
   SPO2_LOW: 60,
   HR_LOW: 50,
   HR_HIGH: 110,
@@ -14,6 +14,7 @@ const THRESHOLDS = {
 
 export default function FatigueIndicator() {
   const data = useFatigueData();
+  const prevLevelRef = useRef("LOW");
 
   // === EVALUATE FATIGUE LEVEL ===
   const evaluateFatigue = () => {
@@ -26,32 +27,31 @@ export default function FatigueIndicator() {
     const spo2 = parseFloat(data.spo2) || 0;
     const eyeStatus = data.status || "Unknown";
 
-    // Temperature
     if (temp >= THRESHOLDS.TEMP_HIGH) level = "MEDIUM";
-
-    // PERCLOS
     if (perclos >= THRESHOLDS.PERCLOS_HIGH) level = "HIGH";
     else if (perclos >= THRESHOLDS.PERCLOS_MEDIUM && level !== "HIGH")
       level = "MEDIUM";
-
-    // Yawn detection
     if (yawn === "Yawning" || yawn === "Opening") level = "HIGH";
-
-    // SpO₂ check
     if (spo2 && spo2 < THRESHOLDS.SPO2_LOW) level = "HIGH";
-
-    // Heart rate
     if (hr && (hr < THRESHOLDS.HR_LOW || hr > THRESHOLDS.HR_HIGH)) {
       if (level !== "HIGH") level = "MEDIUM";
     }
-
-    // Eye closed
     if (eyeStatus === "Closed") level = "HIGH";
 
     return level;
   };
 
   const level = evaluateFatigue();
+
+  // === PLAY ALERT SOUND WHEN HIGH FATIGUE ===
+  useEffect(() => {
+    const prevLevel = prevLevelRef.current;
+    if (level === "HIGH" && prevLevel !== "HIGH") {
+      const alertSound = new Audio("/sounds/alert.mp3"); // store alert.mp3 in public/sounds/
+      alertSound.play().catch((err) => console.log("Sound play error:", err));
+    }
+    prevLevelRef.current = level;
+  }, [level]);
 
   // === ICONS AND COLORS ===
   const getConfig = (lvl) => {
