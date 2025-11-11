@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { CheckCircle, AlertTriangle, XCircle } from "lucide-react";
 import { useFatigueData } from "../hooks/useFatigueData";
-import "./Css/DrowsinessIndicators.css"; // your CSS
+import "./Css/DrowsinessIndicators.css";
 
 const THRESHOLDS = {
   TEMP_HIGH: 38.0,
@@ -15,6 +15,22 @@ const THRESHOLDS = {
 export default function FatigueIndicator() {
   const data = useFatigueData();
   const prevLevelRef = useRef("LOW");
+  const audioRef = useRef(null);
+
+  // Initialize the alert sound
+  useEffect(() => {
+    audioRef.current = new Audio("/sounds/alert.mp3"); // store alert.mp3 inside public/sounds/
+    audioRef.current.loop = true; // keep playing while fatigue is high
+    audioRef.current.volume = 1.0;
+    audioRef.current.preload = "auto";
+
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+    };
+  }, []);
 
   // === EVALUATE FATIGUE LEVEL ===
   const evaluateFatigue = () => {
@@ -43,13 +59,23 @@ export default function FatigueIndicator() {
 
   const level = evaluateFatigue();
 
-  // === PLAY ALERT SOUND WHEN HIGH FATIGUE ===
+  // === PLAY OR STOP ALERT BASED ON LEVEL ===
   useEffect(() => {
     const prevLevel = prevLevelRef.current;
-    if (level === "HIGH" && prevLevel !== "HIGH") {
-      const alertSound = new Audio("/sounds/alert.mp3"); // store alert.mp3 in public/sounds/
-      alertSound.play().catch((err) => console.log("Sound play error:", err));
+    const audio = audioRef.current;
+
+    // When fatigue level becomes HIGH → play alert
+    if (level === "HIGH" && prevLevel !== "HIGH" && audio) {
+      audio.currentTime = 0;
+      audio.play().catch((err) => console.log("Audio play blocked:", err));
     }
+
+    // When fatigue level goes back to LOW or MEDIUM → stop alert
+    if ((level === "LOW" || level === "MEDIUM") && prevLevel === "HIGH" && audio) {
+      audio.pause();
+      audio.currentTime = 0;
+    }
+
     prevLevelRef.current = level;
   }, [level]);
 
