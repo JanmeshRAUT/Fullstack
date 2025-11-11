@@ -3,11 +3,14 @@
   border-radius: 1rem;
   padding: 1.5rem;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  width: 600px;              /* fixed width */
-  height: 400px;  
+  width: 100%;
   max-width: 600px;
   margin: 1rem auto;
-  transition: 0.3s all;
+  min-height: 400px; /* ✅ stable size even when no data */
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 .fatigue-panel.low { border-left: 6px solid #16a34a; }
@@ -46,12 +49,14 @@
 }
 
 .summary {
-  margin-top: 1.2rem;
+  margin-top: 1rem;
   background: #fff;
   padding: 1rem;
   border-radius: 0.75rem;
+  overflow-y: auto;
+  max-height: 150px; /* ✅ prevent large reason lists from stretching card */
+  transition: all 0.3s ease;
 }
-
 .summary h3 {
   font-size: 1rem;
   margin-bottom: 0.5rem;
