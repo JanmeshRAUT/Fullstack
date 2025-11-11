@@ -9,88 +9,71 @@ body {
   background-color: #f4f7fb;
   color: #1e293b;
 }
+
+/* === HEADINGS === */
 .main-heading {
-    font-size: 2.25rem;
-    line-height: 2.5rem; 
-    font-weight: 800; 
-    letter-spacing: -0.025em; 
-    border-bottom: 2px solid #C7D2FE; 
-    padding-bottom: 0.75rem; 
-    margin-bottom: 1rem; 
+  font-size: 2.25rem;
+  line-height: 2.5rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  border-bottom: 2px solid #c7d2fe;
+  padding-bottom: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.left-section h2,
+.right-section h2 {
+  font-size: 1.5rem;
+  line-height: 2rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 4px;
+}
+
+.right-section h2 {
+  text-align: center;
+}
+
+/* === LAYOUT === */
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: 20px 40px 80px; /* ← Added extra bottom padding */
+  background-color: #f4f7fb;
+  color: #1e293b;
+  font-family: "Inter", "Segoe UI", sans-serif;
+}
+
+
+.main-grid {
+  display: flex;
+  gap: 24px;
+  flex: 1;
+  align-items: flex-start;
 }
 
 .left-section,
 .right-section {
   display: flex;
   flex-direction: column;
+}
+
+.left-section {
   flex: 3.2;
-
 }
-
-.left-section h2{
-   font-size: 1.5rem; 
-  line-height: 2rem; 
-  font-weight: 700; 
-  color: #0f172a;
-  margin-bottom: 1rem;
-  border-bottom: 1px solid #e5e7eb;
-  padding-bottom: 4px;
-
-}.right-section h2 {
-  text-align: center;
-  font-size: 1.5rem;
-  line-height: 2rem; 
-  font-weight: 700; 
-  color: #0f172a;
-  margin-bottom: 1rem;
-  border-bottom: 1px solid #e5e7eb;
-  padding-bottom: 4px;
-}
-
 
 .right-section {
   flex: 1;
-  margin-left: 20px; /* keeps a nice gap from left side */
-}
-
-.dashboard {
-  padding: 20px 40px;
-}
-
-h2 {
-  font-size: 1.8rem;
-  font-weight: 600;
-  margin-bottom: 6px;
-  color: #0f172a;
-}
-.class-heading #h2 {
-  font-size: 1.6rem;
-  font-weight: 600;
-  margin-bottom: 14px;
-  margin-top: 40px; /* adds nice spacing between sections */
-  color: #0f172a;
-  border-bottom: 1px solid #e5e7eb;
-  padding-bottom: 4px;
-}
-
-
-.subtitle {
-  color: #64748b;
-  font-size: 0.95rem;
-  margin-bottom: 24px;
-}
-
-/* === MAIN GRID === */
-.main-grid {
-  display: flex;
-  gap: 24px;
-  align-items: flex-start;
+  margin-left: 20px;
 }
 
 .sensor-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  grid-gap: 20px;
+  gap: 20px;
   flex: 3;
   width: 100%;
 }
@@ -106,10 +89,11 @@ h2 {
 /* === CARD DESIGN === */
 .card {
   background: #ffffff;
-  border-radius: 14px;
-  padding: 16px 18px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); 
-  transition: all 0.2s ease;
+  border-radius: 1rem;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  font-family: "Inter", "Segoe UI", sans-serif;
 }
 
 .card:hover {
@@ -122,9 +106,8 @@ h2 {
   color: #0f172a;
   font-weight: 600;
   display: flex;
-  flex-direction: row;
+  align-items: center;
 }
-
 
 /* === CAMERA MODULE === */
 .camera {
@@ -132,33 +115,26 @@ h2 {
   color: #fff;
   padding: 20px;
   text-align: center;
+  border-radius: 14px;
 }
-.camera-feed{
+
+.camera-feed {
   width: 100%;
   height: 120%;
   border-radius: 12px;
   object-fit: cover;
   transform: scaleX(-1);
 }
-.camera h4 {
-  color: #fff;
-  margin-bottom: 12px;
-}
 
 .camera-box {
-  display: flex; 
-  padding: 1rem; 
-  flex-direction: column; 
-  justify-content: center; 
-  align-items: center; 
-  border-radius: 0.75rem; 
-  height: 13rem; 
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); 
-}
-
-.camera-icon {
-  font-size: 36px;
-  margin-bottom: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  height: 13rem;
+  border-radius: 0.75rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
 }
 
 /* === FATIGUE STATUS === */
@@ -169,15 +145,7 @@ h2 {
   border-radius: 14px;
   padding: 16px 25px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-  font-family: "Inter", sans-serif;
   transition: all 0.25s ease;
-}
-
-.fatigue-status-card .left-icon,
-.fatigue-status-card .right-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .fatigue-status-card .status-texts {
@@ -191,7 +159,6 @@ h2 {
   font-size: 0.85rem;
   font-weight: 500;
   color: #64748b;
-  letter-spacing: 0.05em;
   margin-bottom: 4px;
 }
 
@@ -201,7 +168,7 @@ h2 {
   text-transform: uppercase;
 }
 
-/* === COLOR VARIANTS === */
+/* === FATIGUE COLOR VARIANTS === */
 .fatigue-status-card.low {
   background-color: #f0fdf4;
   border-left: 6px solid #16a34a;
@@ -226,55 +193,72 @@ h2 {
   color: #334155;
 }
 
-/* === DROWSINESS INDICATORS === */
-.indicators {
-  background: #fff;
+/* === CHARTS & TOOLTIP === */
+.chart-container {
+  width: 100%;
+  height: 200px;
+  margin-top: 0.75rem;
 }
 
-.indicators h4 {
-  margin-bottom: 12px;
+.custom-tooltip {
+  background-color: #fff;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
 }
 
-.indicators p {
-  margin: 8px 0;
-  font-size: 0.95rem;
-  color: #1e293b;
+.custom-tooltip .tooltip-time {
+  margin: 0;
+  color: #475569;
+  font-size: 0.85rem;
 }
 
-.status-label {
-  font-size: 1.1rem;
-  padding: 6px 14px;
-  border-radius: 10px;
+.custom-tooltip .tooltip-bpm {
+  margin: 0;
+  color: #ef4444;
   font-weight: 600;
-  display: inline-block;
+  font-size: 0.9rem;
+}
+/* === FIXED BOTTOM FOOTER === */
+.footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100vw; /* full viewport width */
+  background-color: #0a023a;
+  color: #ffffff;
+  text-align: center;
+  padding: 12px 0;
+  font-size: 0.95rem;
+  border-top: 2px solid #334155;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.25);
+  z-index: 1000; /* stays above other components */
 }
 
-.fatigue-status.low {
-  background: #e8fdf2;
-  border-left: 6px solid #16a34a;
-  color: #166534;
+/* Hover effect */
+.footer p {
+  margin: 0;
+  transition: color 0.3s ease;
 }
 
-.fatigue-status.medium {
-  background: #fff3cd;
-  border-left: 6px solid #ffb020;
-  color: #9a6700;
+.footer p:hover {
+  color: #cbd5e1;
 }
 
-.fatigue-status.high {
-  background: #fde8e8;
-  border-left: 6px solid #dc2626;
-  color: #b91c1c;
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .footer {
+    font-size: 0.85rem;
+    padding: 10px 0;
+  }
 }
 
-/* === RESPONSIVE DESIGN === */
-/* === RESPONSIVE ENHANCEMENTS (Tablet + Mobile Only) === */
 
-/* For tablets and small laptops */
+/* === RESPONSIVE === */
 @media (max-width: 1024px) {
   .main-grid {
     flex-direction: column;
-    align-items: stretch;
   }
 
   .right-section {
@@ -298,7 +282,6 @@ h2 {
   }
 }
 
-/* For mobile devices */
 @media (max-width: 600px) {
   .dashboard {
     padding: 12px;
@@ -306,9 +289,6 @@ h2 {
 
   .main-heading {
     font-size: 1.6rem;
-    line-height: 2.5rem; 
-    font-weight: 800; 
-    letter-spacing: -0.025em;
   }
 
   .sensor-grid {
@@ -318,11 +298,6 @@ h2 {
   .ml-module {
     flex-direction: column;
     gap: 14px;
-  }
-
-  .right-section,
-  .left-section {
-    margin: 0;
   }
 
   .card {
@@ -343,4 +318,46 @@ h2 {
     font-size: 1.2rem;
   }
 }
+/* === FATIGUE STATUS FIXED / STICKY POSITION === */
+.fatigue-status-wrapper {
+  position: sticky;
+  top: 80px; /* stays visible when scrolling */
+  align-self: start;
+  z-index: 10; /* keeps above other cards */
+}
 
+.fatigue-status-card {
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  padding: 18px 22px;
+  transition: all 0.3s ease-in-out;
+  width: 100%;
+  max-width: 360px;
+  margin: 0 auto;
+}
+
+/* Add light glow based on fatigue level */
+.fatigue-status-card.low {
+  box-shadow: 0 0 10px rgba(22, 163, 74, 0.2);
+}
+
+.fatigue-status-card.medium {
+  box-shadow: 0 0 10px rgba(234, 179, 8, 0.25);
+}
+
+.fatigue-status-card.high {
+  box-shadow: 0 0 12px rgba(220, 38, 38, 0.3);
+}
+
+/* Responsive fix */
+@media (max-width: 1024px) {
+  .fatigue-status-wrapper {
+    position: static;
+    width: 100%;
+  }
+
+  .fatigue-status-card {
+    max-width: 100%;
+  }
+}

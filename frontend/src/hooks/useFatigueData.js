@@ -22,11 +22,14 @@ export const useFatigueData = () => {
 
         setData({
           temperature: sensorData.temperature,
+          hr: sensorData.hr,
+          spo2: sensorData.spo2,
           perclos: perclosData.perclos,
           status: perclosData.status,
-          yawn_status: perclosData.yawn_status, // ✅ Added this line
+          yawn_status: perclosData.yawn_status,
           timestamp: Date.now(),
         });
+
       } catch (error) {
         console.error('Error fetching fatigue data:', error);
       }

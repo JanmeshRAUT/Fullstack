@@ -4,7 +4,6 @@ export default function CameraModule() {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const [cameraStatus, setCameraStatus] = useState("Idle");
-  const [perclosData, setPerclosData] = useState({ perclos: 0, status: "No Face" });
 
   useEffect(() => {
     let stream;
@@ -58,25 +57,11 @@ export default function CameraModule() {
 
       if (!response.ok) throw new Error("Failed to process frame");
 
-      const data = await response.json();
-      setPerclosData(data);
     } catch (err) {
       console.error("Frame send error:", err);
     }
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "Closed":
-        return "#dc2626"; // red
-      case "Open":
-        return "#16a34a"; // green
-      case "No Face":
-        return "#facc15"; // yellow
-      default:
-        return "#94a3b8"; // gray
-    }
-  };
 
   return (
     <div className="card camera">

@@ -1,74 +1,80 @@
-  import React from "react";
-  import { useFatigueData } from "../hooks/useFatigueData";
-  import "./Css/DrowsinessIndicators.css";
+import React from "react";
+import { CheckCircle, AlertTriangle, XCircle } from "lucide-react";
+import { useFatigueData } from "../hooks/useFatigueData";
+import "./Css/DrowsinessIndicators.css"; // your posted CSS file
 
-  const THRESHOLDS = {
-    TEMP_HIGH: 38.0,
-    PERCLOS_HIGH: 50,
-    PERCLOS_MEDIUM: 25,
+const THRESHOLDS = {
+  TEMP_HIGH: 38.0,
+  PERCLOS_MEDIUM: 25,
+  PERCLOS_HIGH: 50,
+  SPO2_LOW: 60,
+  HR_LOW: 50,
+  HR_HIGH: 110,
+};
+
+export default function FatigueIndicator() {
+  const data = useFatigueData();
+
+  // === EVALUATE FATIGUE LEVEL ===
+  const evaluateFatigue = () => {
+    let level = "LOW";
+
+    const temp = parseFloat(data.temperature) || 0;
+    const perclos = parseFloat(data.perclos) || 0;
+    const yawn = data.yawn_status || "Closed";
+    const hr = parseFloat(data.hr) || 0;
+    const spo2 = parseFloat(data.spo2) || 0;
+    const eyeStatus = data.status || "Unknown";
+
+    // Temperature
+    if (temp >= THRESHOLDS.TEMP_HIGH) level = "MEDIUM";
+
+    // PERCLOS
+    if (perclos >= THRESHOLDS.PERCLOS_HIGH) level = "HIGH";
+    else if (perclos >= THRESHOLDS.PERCLOS_MEDIUM && level !== "HIGH")
+      level = "MEDIUM";
+
+    // Yawn detection
+    if (yawn === "Yawning" || yawn === "Opening") level = "HIGH";
+
+    // SpO₂ check
+    if (spo2 && spo2 < THRESHOLDS.SPO2_LOW) level = "HIGH";
+
+    // Heart rate
+    if (hr && (hr < THRESHOLDS.HR_LOW || hr > THRESHOLDS.HR_HIGH)) {
+      if (level !== "HIGH") level = "MEDIUM";
+    }
+
+    // Eye closed
+    if (eyeStatus === "Closed") level = "HIGH";
+
+    return level;
   };
-  
 
-  export default function DrowsinessIndicators() {
-    const data = useFatigueData();
+  const level = evaluateFatigue();
 
-    const getIndicatorClass = (type, value) => {
-      if (value === null) return "unknown";
-      switch (type) {
-        case "temperature":
-          return value >= THRESHOLDS.TEMP_HIGH ? "danger" : "normal";
-        case "perclos":
-          return value >= THRESHOLDS.PERCLOS_HIGH
-            ? "danger"
-            : value >= THRESHOLDS.PERCLOS_MEDIUM
-            ? "warning"
-            : "normal";
-        default:
-          return "normal";
-      }
-    };
+  // === ICONS AND COLORS ===
+  const getConfig = (lvl) => {
+    switch (lvl) {
+      case "LOW":
+        return { label: "Alert", icon: <CheckCircle color="#16a34a" size={24} /> };
+      case "MEDIUM":
+        return { label: "Drowsy", icon: <AlertTriangle color="#ca8a04" size={24} /> };
+      case "HIGH":
+        return { label: "Fatigued", icon: <XCircle color="#dc2626" size={24} /> };
+      default:
+        return { label: "Unknown", icon: <AlertTriangle color="#6b7280" size={24} /> };
+    }
+  };
 
-    return (
-      <div className="card indicators">
-        <h4>Real-time Drowsiness Indicators</h4>
+  const { label, icon } = getConfig(level);
 
-        <div className={`indicator ${getIndicatorClass("perclos", data.perclos)}`}>
-          <span className="label">PERCLOS:</span>
-          <span className="value">
-            {data.perclos !== null && data.perclos !== undefined
-              ? `${data.perclos.toFixed(1)}%`
-              : "N/A"}
-          </span>
-          <span className="status">
-            {data.perclos === null ? "No Data" : data.status}
-          </span>
-        </div>
-
-        <div
-          className={`indicator ${getIndicatorClass(
-            "temperature",
-            data.temperature
-          )}`}
-        >
-          <span className="label">Temperature:</span>
-          <span className="value">
-            {data.temperature !== null && data.temperature !== undefined
-              ? `${data.temperature.toFixed(1)}°C`
-              : "N/A"}
-          </span>
-        </div>
-
-        {/* === Yawn Detection Display === */}
-        <div className="indicator normal">
-          <span className="label">Yawn:</span>
-          <span className="value">
-            {data.yawn_status || "N/A"}
-          </span>
-        </div>
-
-        <div className="update-time">
-          Updated: {new Date().toLocaleTimeString()}
-        </div>
+  return (
+    <div className="fatigue-indicator-container">
+      <div className={`fatigue-indicator ${level.toLowerCase()}`}>
+        <div className="indicator-icon">{icon}</div>
+        <span className="indicator-label">{label}</span>
       </div>
-    );
-  }
+    </div>
+  );
+}

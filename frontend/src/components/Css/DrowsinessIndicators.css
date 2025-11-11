@@ -1,50 +1,88 @@
-.indicators {
-  padding: 1.5rem;
+/* === FIXED TOP-RIGHT STATUS INDICATOR === */
+.fatigue-indicator-container {
+  position: fixed;
+  top: 20px;
+  right: 24px;
+  z-index: 9999;
+  transition: all 0.3s ease;
 }
 
-.indicator {
+/* === MAIN INDICATOR BOX === */
+.fatigue-indicator {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 0.75rem;
-  margin: 0.5rem 0;
-  border-radius: 0.5rem;
-  background: #f3f4f6;
-}
-
-.indicator.warning,
-.indicator.high {
-  background: #fee2e2;
-  color: #dc2626;
-}
-
-.indicator .label {
-  font-weight: 600;
-  min-width: 100px;
-}
-
-.indicator .value {
-  font-size: 1.25rem;
-  font-weight: 700;
-}
-
-.indicator .status {
-  margin-left: auto;
-  font-size: 0.875rem;
-  padding: 0.25rem 0.75rem;
+  gap: 10px;
+  padding: 14px 20px;
+  border: 3px solid;
   border-radius: 9999px;
-  background: #e5e7eb;
+  background-color: #ffffff;
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(8px);
+  transition: all 0.3s ease;
 }
 
-.indicator.warning .status,
-.indicator.high .status {
-  background: #dc2626;
-  color: white;
+.fatigue-indicator:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 25px rgba(0, 0, 0, 0.15);
 }
 
-.update-time {
-  margin-top: 1rem;
-  font-size: 0.875rem;
-  color: #6b7280;
-  text-align: right;
+/* === ICON & TEXT === */
+.indicator-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.indicator-label {
+  font-size: 1.05rem;
+}
+
+/* === LEVEL COLORS === */
+.fatigue-indicator.low {
+  background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+}
+
+.fatigue-indicator.medium {
+  background: linear-gradient(135deg, #fff9e6, #fef3c7);
+}
+
+.fatigue-indicator.high {
+  background: linear-gradient(135deg, #fef2f2, #fee2e2);
+}
+
+.fatigue-indicator.unknown {
+  background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+}
+
+/* === BLINK EFFECT WHEN HIGH === */
+@keyframes intense-pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 20px rgba(220,38,38,0.5);
+  }
+  50% {
+    transform: scale(1.08);
+    box-shadow: 0 0 35px rgba(220,38,38,0.7);
+  }
+}
+
+.fatigue-indicator.high {
+  animation: intense-pulse 1.2s infinite;
+}
+
+/* Responsive fix */
+@media (max-width: 768px) {
+  .fatigue-indicator {
+    font-size: 0.9rem;
+    padding: 10px 14px;
+  }
+
+  .fatigue-indicator-container {
+    top: 16px;
+    right: 16px;
+  }
 }

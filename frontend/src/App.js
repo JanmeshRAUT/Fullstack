@@ -11,6 +11,7 @@ import DrowsinessIndicators from "./components/DrowsinessIndicators";
 function App() {
   return (
     <div className="dashboard">
+      <DrowsinessIndicators />
       <h1 className="main-heading">Fatigue Detection System Dashboard</h1>
       <p className="subtitle">
         Real-time physiological monitoring, ML-driven drowsiness prediction, and{" "}
@@ -18,6 +19,7 @@ function App() {
       </p>
 
       <div className="main-grid">
+        {/* LEFT SECTION: SENSOR CHARTS */}
         <div className="left-section">
           <h2>Physiological Sensor Telemetry</h2>
           <div className="sensor-grid">
@@ -28,14 +30,24 @@ function App() {
           </div>
         </div>
 
+        {/* RIGHT SECTION: CAMERA + FATIGUE STATUS */}
         <div className="right-section">
           <h2>ML & Camera Module</h2>
           <div className="ml-module">
             <CameraModule />
-            <FatigueStatus />
-            <DrowsinessIndicators />
+
+            {/* Sticky Fatigue Card */}
+            <div className="fatigue-status-wrapper">
+              <FatigueStatus />
+            </div>
           </div>
         </div>
+      </div>
+
+      <div className="footer">
+        <p>
+          &copy; 2025 Fatigue Detection System. Developed by Realtime Error. All rights reserved.
+        </p>
       </div>
     </div>
   );
