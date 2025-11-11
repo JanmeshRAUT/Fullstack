@@ -1,4 +1,3 @@
-
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import cv2
@@ -13,40 +12,25 @@ import threading
 import serial
 import serial.tools.list_ports
 
-print("[DIAGNOSTIC] Environment OK ✅")
-
 app = Flask(__name__)
 CORS(app)
 sensor_lock = threading.Lock()
 
-latest_sensor_data = {
-    "temperature": None,
-    "ax": None, "ay": None, "az": None,
-    "gx": None, "gy": None, "gz": None,
-    "hr": None, "spo2": None,
-    "timestamp": None
-}
-sensor_data_history = deque(maxlen=50)
+# ========== GLOBAL STATES ==========
+latest_sensor_data = {"temperature": None, "ax": None, "ay": None, "az": None,
+                      "gx": None, "gy": None, "gz": None, "hr": None, "spo2": None,
+                      "timestamp": None}
 
-head_position_data = {
-    "position": "Center",
-    "angle_x": 0.0,  # up-down
-    "angle_y": 0.0,  # left-right
-    "timestamp": int(time.time())
-}
+head_position_data = {"position": "Center", "angle_x": 0.0, "angle_y": 0.0,
+                      "timestamp": int(time.time())}
 
-perclos_data = {
-    "status": "No Face",
-    "perclos": 0.0,
-    "ear": 0.0,
-    "yawn_status": "Closed",
-    "mar": 0.0,
-    "adaptive_mar_thresh": 0.6,
-    "timestamp": int(time.time())
-}
+perclos_data = {"status": "No Face", "perclos": 0.0, "ear": 0.0,
+                "yawn_status": "Closed", "mar": 0.0, "adaptive_mar_thresh": 0.6,
+                "timestamp": int(time.time())}
 
+
+# ========== SERIAL SENSOR HANDLING ==========
 def parse_raw_sensor_string(raw: str):
-
     parts = [p.strip() for p in raw.split(',') if p.strip()]
     parsed = {}
     for p in parts:
@@ -74,13 +58,12 @@ def find_arduino_port():
         if "Arduino" in p.description or "CH340" in p.description or "ttyACM" in p.device:
             return p.device
     if ports:
-        print(f"[WARN] Defaulting to {ports[0].device}")
         return ports[0].device
     raise Exception("No serial ports found. Connect Arduino via USB.")
 
 
 def serial_reader():
-    global latest_sensor_data, sensor_data_history
+    global latest_sensor_data
     try:
         port = find_arduino_port()
         ser = serial.Serial(port=port, baudrate=115200, timeout=1)
@@ -92,58 +75,23 @@ def serial_reader():
             parsed = parse_raw_sensor_string(line)
             if not parsed:
                 continue
-
             timestamp = int(time.time())
             with sensor_lock:
                 latest_sensor_data.update({**parsed, "timestamp": timestamp})
-                sensor_data_history.append(latest_sensor_data.copy())
-
-            print(f"[SERIAL DATA] {line}", flush=True)
     except Exception as e:
         print(f"[SERIAL ERROR] {e}")
         traceback.print_exc()
 
-@app.route('/')
-def home():
-    return "✅ Flask Sensor + PERCLOS + Head Position (Wired Mode)", 200
 
-
-@app.route('/sensor_data', methods=['GET'])
-def get_sensor_data():
-    if latest_sensor_data["temperature"] is None:
-        return jsonify({"message": "No data yet"}), 200
-    return jsonify(latest_sensor_data), 200
-
-
-@app.route('/sensor_data/history', methods=['GET'])
-def get_sensor_data_history():
-    return jsonify(list(sensor_data_history)), 200
-
+# ========== HEAD POSITION ==========
 def calculate_head_position(ax, ay, az):
-
     try:
-        angle_x = math.degrees(math.atan2(ax, math.sqrt(ay**2 + az**2)))  
-        angle_y = math.degrees(math.atan2(ay, math.sqrt(ax**2 + az**2)))   
+        angle_x = math.degrees(math.atan2(ax, math.sqrt(ay**2 + az**2)))
+        angle_y = math.degrees(math.atan2(ay, math.sqrt(ax**2 + az**2)))
 
-        UP_THRESHOLD = 10
-        DOWN_THRESHOLD = -10
-        LEFT_THRESHOLD = -10
-        RIGHT_THRESHOLD = 10
+        vertical = "Up" if angle_x > 10 else "Down" if angle_x < -10 else "Center"
+        horizontal = "Right" if angle_y > 10 else "Left" if angle_y < -10 else "Center"
 
-        if angle_x > UP_THRESHOLD:
-            vertical = "Up"
-        elif angle_x < DOWN_THRESHOLD:
-            vertical = "Down"
-        else:
-            vertical = "Center"
-
-        if angle_y > RIGHT_THRESHOLD:
-            horizontal = "Right"
-        elif angle_y < LEFT_THRESHOLD:
-            horizontal = "Left"
-        else:
-            horizontal = "Center"
-            
         if vertical == "Center" and horizontal == "Center":
             position = "Center"
         elif vertical != "Center" and horizontal == "Center":
@@ -154,30 +102,11 @@ def calculate_head_position(ax, ay, az):
             position = f"{vertical}-{horizontal}"
 
         return position, angle_x, angle_y
-
-    except Exception as e:
-        print(f"[HEAD POSITION ERROR] {e}")
+    except Exception:
         return "Unknown", 0.0, 0.0
 
 
-
-@app.route('/head_position', methods=['GET'])
-def get_head_position():
-    if latest_sensor_data["ax"] is None:
-        return jsonify({"message": "No data yet"}), 200
-
-    pos, ang_x, ang_y = calculate_head_position(
-        latest_sensor_data["ax"], latest_sensor_data["ay"], latest_sensor_data["az"]
-    )
-
-    head_position_data.update({
-        "position": pos,
-        "angle_x": round(ang_x, 2),
-        "angle_y": round(ang_y, 2),
-        "timestamp": int(time.time())
-    })
-    return jsonify(head_position_data), 200
-
+# ========== FACE PROCESSING ==========
 mp_face_mesh = mp.solutions.face_mesh
 face_mesh = mp_face_mesh.FaceMesh(max_num_faces=1, refine_landmarks=True, min_detection_confidence=0.5)
 
@@ -210,17 +139,16 @@ def mouth_aspect_ratio(mouth):
     return v / h if h else 0
 
 
-@app.route('/process_frame', methods=['POST'])
+@app.route("/process_frame", methods=["POST"])
 def process_frame():
     global perclos_data, eye_status_history, yawn_frames_count, mar_history
     now = int(time.time())
-
     try:
         data = request.get_json()
-        if not data or 'image_data' not in data:
+        if not data or "image_data" not in data:
             return jsonify({"error": "Missing image_data"}), 400
 
-        base64_string = data['image_data'].split(',')[1]
+        base64_string = data["image_data"].split(",")[1]
         frame = cv2.imdecode(np.frombuffer(base64.b64decode(base64_string), np.uint8), cv2.IMREAD_COLOR)
         if frame is None:
             raise ValueError("Invalid frame data")
@@ -283,19 +211,9 @@ def process_frame():
         return jsonify({"error": str(e)}), 500
 
 
-@app.route('/perclos', methods=['GET'])
-def get_perclos():
-    return jsonify(perclos_data), 200
-
-
-@app.route('/combined_data', methods=['GET'])
+@app.route("/combined_data", methods=["GET"])
 def get_combined_data():
-    hp = {
-        "position": "Unknown",
-        "angle_x": 0.0,
-        "angle_y": 0.0,
-        "timestamp": int(time.time())
-    }
+    hp = {"position": "Unknown", "angle_x": 0.0, "angle_y": 0.0, "timestamp": int(time.time())}
 
     if latest_sensor_data.get("ax") is not None:
         pos, ang_x, ang_y = calculate_head_position(
@@ -303,12 +221,7 @@ def get_combined_data():
             latest_sensor_data["ay"],
             latest_sensor_data["az"]
         )
-        hp = {
-            "position": pos,
-            "angle_x": round(ang_x, 2),
-            "angle_y": round(ang_y, 2),
-            "timestamp": int(time.time())
-        }
+        hp = {"position": pos, "angle_x": round(ang_x, 2), "angle_y": round(ang_y, 2), "timestamp": int(time.time())}
 
     return jsonify({
         "sensor": latest_sensor_data,
@@ -318,8 +231,7 @@ def get_combined_data():
     }), 200
 
 
-# ------------------ RUN SERVER ------------------
-if __name__ == '__main__':
-    serial_thread = threading.Thread(target=serial_reader, daemon=True)
-    serial_thread.start()
-    app.run(host='0.0.0.0', port=5000, debug=False)
+# ========== RUN SERVER ==========
+if __name__ == "__main__":
+    threading.Thread(target=serial_reader, daemon=True).start()
+    app.run(host="0.0.0.0", port=5000, debug=False)
