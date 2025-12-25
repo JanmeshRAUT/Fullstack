@@ -1,135 +1,114 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import {
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer,
-  ReferenceLine,
+  ResponsiveContainer
 } from "recharts";
-import { Activity } from "lucide-react";
-import { motion } from "framer-motion";
 
-// Custom Tooltip
-const CustomTooltip = ({ active, payload, label }) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="tooltip-box">
-        <p className="tooltip-time">{`Time: ${label}`}</p>
-        <p className="tooltip-value">{`HRV (SDNN): ${payload[0].value.toFixed(0)} ms`}</p>
-      </div>
-    );
-  }
-  return null;
-};
-
-export default function HRV() {
-  const [data, setData] = useState(() =>
-    Array.from({ length: 10 }, (_, i) => ({
-      time: `${i}s`,
-      value: 50,
-    }))
-  );
-
-  const rrRef = useRef([]);
-  const timeRef = useRef(data.length - 1);
-
-  const hrToRR = (hr) => (hr > 0 ? 60000 / hr : 1000);
+export default function HRVChart() {
+  const [hrvHistory, setHrvHistory] = useState([]);
+  const [rawHrBuffer, setRawHrBuffer] = useState([]);
 
   useEffect(() => {
     const fetchHR = async () => {
       try {
-        const res = await fetch("http://localhost:5000/sensor_data");
-        const json = await res.json();
-        return json.hr ?? 70;
-      } catch (e) {
-        console.error("Failed to fetch HR:", e);
-        return 70;
+        const res = await fetch("http://127.0.0.1:5000/combined_data");
+        const data = await res.json();
+        
+        // Get Heart Rate (0 if invalid)
+        const currentHr = data.sensor?.hr || 0;
+
+        // 1. Update Raw Buffer (Keep last 20 readings ~ 10-20 seconds)
+        let newBuffer = [...rawHrBuffer, currentHr];
+        if (newBuffer.length > 20) newBuffer.shift(); 
+        setRawHrBuffer(newBuffer);
+
+        // 2. Calculate Standard Deviation (HRV Proxy)
+        // Filter out zeros/noise for calculation
+        const validReadings = newBuffer.filter(h => h > 40 && h < 200);
+        
+        let sdnn = 0;
+        if (validReadings.length > 2) {
+            const mean = validReadings.reduce((sum, val) => sum + val, 0) / validReadings.length;
+            const variance = validReadings.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / validReadings.length;
+            sdnn = Math.sqrt(variance);
+        }
+
+        // 3. Update Chart Data
+        setHrvHistory(prev => {
+           const time = prev.length > 0 ? prev[prev.length-1].time + 1 : 0;
+           const newData = [...prev, { time, value: sdnn }];
+           if (newData.length > 30) newData.shift();
+           return newData;
+        });
+
+      } catch (err) {
+        console.error("HRV Fetch Error", err);
       }
     };
 
-    const interval = setInterval(async () => {
-      timeRef.current += 1;
-      const hr = await fetchHR();
-      const rr = hrToRR(hr);
-
-      rrRef.current.push(rr);
-      if (rrRef.current.length > 20) rrRef.current.shift();
-
-      const meanRR =
-        rrRef.current.reduce((acc, v) => acc + v, 0) / rrRef.current.length;
-      const sdnn = Math.sqrt(
-        rrRef.current.reduce((acc, v) => acc + (v - meanRR) ** 2, 0) /
-          rrRef.current.length
-      );
-
-      setData((prev) => {
-        const newPoint = { time: `${timeRef.current}s`, value: Math.round(sdnn) };
-        return [...prev.slice(-9), newPoint];
-      });
-    }, 1000);
-
+    const interval = setInterval(fetchHR, 1000); // 1Hz update
     return () => clearInterval(interval);
-  }, []);
+  }, [rawHrBuffer]);
 
   return (
-    <motion.div
-      className="card hrv-card"
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-    >
-      <div className="card-header">
-        <Activity size={20} className="icon activity-icon" />
-        <h4 className="card-title">
-          Heart Rate Variability <span className="unit">(SDNN in ms)</span>
-        </h4>
+    <div style={{ width: "100%", height: "100%" }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={hrvHistory} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
+          <defs>
+            <linearGradient id="colorHrv" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
+              <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#000" strokeOpacity={0.05} />
+          <XAxis 
+             dataKey="time" 
+             tick={{fontSize: 10, fill: '#cbd5e1'}} 
+             tickLine={false}
+             axisLine={false}
+          />
+          <YAxis 
+            domain={[0, 20]} 
+            hide={true}
+          />
+          <Tooltip 
+             contentStyle={{
+                backgroundColor: '#fff',
+                border: '1px solid #e2e8f0',
+                borderRadius: '6px',
+                fontSize: '12px'
+             }}
+             formatter={(val) => [`${val.toFixed(1)}`, 'HRV (SDNN)']}
+             labelStyle={{display: 'none'}}
+             cursor={{ stroke: '#8b5cf6', strokeWidth: 1, strokeDasharray: '4 4' }}
+          />
+          <Area
+            type="monotone"
+            dataKey="value"
+            stroke="#8b5cf6"
+            strokeWidth={3}
+            fillOpacity={1}
+            fill="url(#colorHrv)"
+            isAnimationActive={false}
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+      
+      {/* METRIC OVERLAY */}
+      <div style={{
+          position: 'absolute', top: 10, right: 20, 
+          textAlign: 'right', pointerEvents: 'none'
+      }}>
+          <div style={{fontSize: '1.8rem', fontWeight: 800, color: '#8b5cf6', lineHeight: 1}}>
+             {hrvHistory.length > 0 ? hrvHistory[hrvHistory.length-1].value.toFixed(1) : "--"}
+          </div>
+          <div style={{fontSize: '0.75rem', fontWeight: 600, color: '#94a3b8'}}>ms (SDNN)</div>
       </div>
-
-      <div className="chart-container">
-        <ResponsiveContainer width="100%" height={200}>
-          <LineChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="4 4" stroke="#e2e8f0" vertical={false} />
-            <XAxis
-              dataKey="time"
-              tick={{ fontSize: 12, fill: "#475569" }}
-              tickLine={false}
-              axisLine={{ stroke: "#cbd5e1" }}
-            />
-            <YAxis
-              domain={[20, 100]}
-              tick={{ fontSize: 12, fill: "#475569" }}
-              tickLine={false}
-              axisLine={false}
-            />
-            <ReferenceLine
-              y={50}
-              stroke="#10b981"
-              strokeDasharray="5 5"
-              label={{
-                value: "Good HRV baseline",
-                position: "top",
-                fill: "#10b981",
-                fontSize: 10,
-              }}
-            />
-            <Tooltip content={<CustomTooltip />} />
-            <Line
-              type="monotone"
-              dataKey="value"
-              stroke="#ef4444"
-              strokeWidth={2.5}
-              dot={false}
-              activeDot={{ r: 5, fill: "#ef4444", stroke: "#fff", strokeWidth: 2 }}
-              isAnimationActive={true}
-              animationDuration={400}
-              animationEasing="linear"
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-    </motion.div>
+    </div>
   );
 }

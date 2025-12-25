@@ -1,7 +1,7 @@
 import React from "react";
 import {
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -9,84 +9,65 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { useSensorData } from "../hooks/useSensorData";
-import { Thermometer } from "lucide-react";
-import { motion } from "framer-motion";
 
 export default function BodyTemperatureChart() {
   const { sensorData, dataHistory } = useSensorData();
-
-  const temp = sensorData?.temperature;
-  const getTempStatus = (value) => {
-    if (value < 36.0) return { label: "Low", color: "#0ea5e9" }; // Blue
-    if (value >= 36.0 && value <= 37.5) return { label: "Normal", color: "#16a34a" }; // Green
-    return { label: "High", color: "#dc2626" }; // Red
-  };
-
-  const status = temp ? getTempStatus(temp) : { label: "Loading", color: "#94a3b8" };
+  const currentTemp = sensorData?.temperature;
 
   return (
-    <motion.div
-      className="card"
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-    >
-      <h4 style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-        <Thermometer size={20} className="icon-mr" />
-        Body Temperature
-        <span style={{ color: "#64748b" }}>(°C)</span>
-      </h4>
-
-      <div className="current-value" style={{ fontSize: "1.25rem", fontWeight: "700" }}>
-        {temp ? `${temp.toFixed(2)}°C` : "Loading..."}
-      </div>
-
-      {temp && (
-        <p
-          style={{
-            color: status.color,
-            fontWeight: "600",
-            fontSize: "0.9rem",
-            marginTop: "-4px",
-          }}
-        >
-          {status.label} Temperature
-        </p>
-      )}
-
-      <div style={{ width: "100%", height: 200, marginTop: "10px" }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={dataHistory}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-            <XAxis
-              dataKey="time"
-              tick={{ fontSize: 12, fill: "#475569" }}
-              tickFormatter={(time) => time.split(":").slice(0, 2).join(":")}
+    <div style={{ width: "100%", height: "100%", position: "relative" }}>
+       
+       <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={dataHistory} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
+            <defs>
+              <linearGradient id="colorTemp" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#f97316" stopOpacity={0.3}/>
+                <stop offset="95%" stopColor="#f97316" stopOpacity={0}/>
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#000" strokeOpacity={0.05} />
+            <XAxis 
+               dataKey="time" 
+               tickFormatting={(t) => t.split(':').slice(0,2).join(':')}
+               tick={{fontSize: 10, fill: '#cbd5e1'}} 
+               tickLine={false}
+               axisLine={false}
             />
-            <YAxis
-              domain={[32, 40]}
-              tick={{ fontSize: 12, fill: "#475569" }}
-              tickFormatter={(value) => value.toFixed(1)}
+            <YAxis 
+              domain={['dataMin - 0.5', 'dataMax + 0.5']} 
+              hide={true}
             />
-            <Tooltip
+            <Tooltip 
               contentStyle={{
-                backgroundColor: "#fff",
-                border: "1px solid #e2e8f0",
-                borderRadius: "8px",
-                fontSize: "0.85rem",
+                backgroundColor: '#fff',
+                border: '1px solid #e2e8f0',
+                borderRadius: '8px',
+                boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'
               }}
+              labelStyle={{ display: 'none' }}
+              cursor={{ stroke: '#f97316', strokeWidth: 1, strokeDasharray: '4 4' }}
             />
-            <Line
+            <Area
               type="monotone"
               dataKey="temperature"
-              stroke={status.color}
-              strokeWidth={2.5}
-              dot={false}
-              isAnimationActive={false}
+              stroke="#f97316"
+              strokeWidth={3}
+              fillOpacity={1}
+              fill="url(#colorTemp)"
             />
-          </LineChart>
+          </AreaChart>
         </ResponsiveContainer>
-      </div>
-    </motion.div>
+
+        {/* METRIC OVERLAY */}
+        <div style={{
+            position: 'absolute', top: 10, right: 20, 
+            textAlign: 'right', pointerEvents: 'none'
+        }}>
+            <div style={{fontSize: '1.8rem', fontWeight: 800, color: '#f97316', lineHeight: 1}}>
+               {currentTemp ? currentTemp.toFixed(1) : "--"}
+            </div>
+            <div style={{fontSize: '0.75rem', fontWeight: 600, color: '#94a3b8'}}>°C ({currentTemp > 37.5 ? "High" : "Normal"})</div>
+        </div>
+    </div>
   );
 }

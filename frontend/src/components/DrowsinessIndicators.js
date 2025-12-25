@@ -17,10 +17,9 @@ export default function FatigueIndicator() {
   const prevLevelRef = useRef("LOW");
   const audioRef = useRef(null);
 
-  // Initialize the alert sound
   useEffect(() => {
-    audioRef.current = new Audio("/sounds/alert.mp3"); // store alert.mp3 inside public/sounds/
-    audioRef.current.loop = true; // keep playing while fatigue is high
+    audioRef.current = new Audio("/sounds/alert.mp3"); 
+    audioRef.current.loop = true; 
     audioRef.current.volume = 1.0;
     audioRef.current.preload = "auto";
 
@@ -32,8 +31,16 @@ export default function FatigueIndicator() {
     };
   }, []);
 
-  // === EVALUATE FATIGUE LEVEL ===
   const evaluateFatigue = () => {
+    // 1. Prioritize ML Model Prediction
+    if (data.ml_fatigue_status && data.ml_fatigue_status !== 'Unknown' && data.ml_fatigue_status !== 'Error') {
+      const ml = data.ml_fatigue_status;
+      if (ml === "Fatigued") return "HIGH";
+      if (ml === "Drowsy") return "MEDIUM";
+      if (ml === "Alert") return "LOW";
+    }
+
+    // 2. Fallback to Rule-Based System
     let level = "LOW";
 
     const temp = parseFloat(data.temperature) || 0;
@@ -59,18 +66,16 @@ export default function FatigueIndicator() {
 
   const level = evaluateFatigue();
 
-  // === PLAY OR STOP ALERT BASED ON LEVEL ===
+
   useEffect(() => {
     const prevLevel = prevLevelRef.current;
     const audio = audioRef.current;
 
-    // When fatigue level becomes HIGH → play alert
     if (level === "HIGH" && prevLevel !== "HIGH" && audio) {
       audio.currentTime = 0;
       audio.play().catch((err) => console.log("Audio play blocked:", err));
     }
 
-    // When fatigue level goes back to LOW or MEDIUM → stop alert
     if ((level === "LOW" || level === "MEDIUM") && prevLevel === "HIGH" && audio) {
       audio.pause();
       audio.currentTime = 0;
@@ -79,7 +84,6 @@ export default function FatigueIndicator() {
     prevLevelRef.current = level;
   }, [level]);
 
-  // === ICONS AND COLORS ===
   const getConfig = (lvl) => {
     switch (lvl) {
       case "LOW":

@@ -1,9 +1,9 @@
 /* === FIXED TOP-RIGHT STATUS INDICATOR === */
 .fatigue-indicator-container {
   position: fixed;
-  top: 20px;
+  top: 80px; /* Below the header */
   right: 24px;
-  z-index: 9999;
+  z-index: 40;
   transition: all 0.3s ease;
 }
 
@@ -11,23 +11,24 @@
 .fatigue-indicator {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 14px 20px;
-  border: 3px solid;
+  gap: 12px;
+  padding: 10px 20px;
+  border: 1px solid var(--border-subtle);
   border-radius: 9999px;
-  background-color: #ffffff;
-  font-weight: 700;
-  font-size: 1rem;
-  letter-spacing: 0.3px;
+  background: white;
+  font-family: var(--font-display, sans-serif);
+  font-weight: 600;
+  font-size: 0.9rem;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  box-shadow: 0 0 12px rgba(0, 0, 0, 0.15);
-  backdrop-filter: blur(8px);
-  transition: all 0.3s ease;
+  color: var(--text-primary);
+  box-shadow: var(--shadow-md);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .fatigue-indicator:hover {
-  transform: scale(1.05);
-  box-shadow: 0 0 25px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
 }
 
 /* === ICON & TEXT === */
@@ -38,51 +39,52 @@
 }
 
 .indicator-label {
-  font-size: 1.05rem;
+  font-size: 0.9rem;
+  color: var(--text-primary);
 }
 
 /* === LEVEL COLORS === */
 .fatigue-indicator.low {
-  background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+  border-color: var(--success);
+  background: #f0fdf4;
 }
+.fatigue-indicator.low .indicator-icon { color: var(--success); }
+.fatigue-indicator.low .indicator-label { color: #15803d; }
 
 .fatigue-indicator.medium {
-  background: linear-gradient(135deg, #fff9e6, #fef3c7);
+  border-color: var(--warning);
+  background: #fefce8;
 }
+.fatigue-indicator.medium .indicator-icon { color: var(--warning); }
+.fatigue-indicator.medium .indicator-label { color: #a16207; }
 
 .fatigue-indicator.high {
-  background: linear-gradient(135deg, #fef2f2, #fee2e2);
+  border-color: var(--danger);
+  background: #fef2f2;
 }
+.fatigue-indicator.high .indicator-icon { color: var(--danger); }
+.fatigue-indicator.high .indicator-label { color: #b91c1c; }
 
-.fatigue-indicator.unknown {
-  background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
-}
 
 /* === BLINK EFFECT WHEN HIGH === */
-@keyframes intense-pulse {
-  0%, 100% {
-    transform: scale(1);
-    box-shadow: 0 0 20px rgba(220,38,38,0.5);
-  }
-  50% {
-    transform: scale(1.08);
-    box-shadow: 0 0 35px rgba(220,38,38,0.7);
-  }
+@keyframes pulse-red {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
 }
 
 .fatigue-indicator.high {
-  animation: intense-pulse 1.2s infinite;
+  animation: pulse-red 2s infinite;
 }
 
 /* Responsive fix */
 @media (max-width: 768px) {
-  .fatigue-indicator {
-    font-size: 0.9rem;
-    padding: 10px 14px;
-  }
-
   .fatigue-indicator-container {
-    top: 16px;
-    right: 16px;
+    top: auto;
+    bottom: 24px; 
+    right: 24px;
+    left: 24px;
+    display: flex;
+    justify-content: center;
   }
 }

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { Wifi, WifiOff } from "lucide-react";
 
 export default function CameraModule() {
   const videoRef = useRef(null);
@@ -18,7 +19,7 @@ export default function CameraModule() {
           setCameraStatus("Streaming");
         }
 
-        // Send frames to Flask backend every 800ms
+        // Send frames to Flask backend
         frameInterval = setInterval(() => {
           sendFrameToBackend();
         }, 800);
@@ -36,7 +37,6 @@ export default function CameraModule() {
     };
   }, []);
 
-  // Capture frame and send to Flask
   const sendFrameToBackend = async () => {
     if (!videoRef.current || !canvasRef.current) return;
     const canvas = canvasRef.current;
@@ -54,34 +54,41 @@ export default function CameraModule() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ image_data: imageData }),
       });
-
-      if (!response.ok) throw new Error("Failed to process frame");
-
+      if (!response.ok) throw new Error("Failed");
     } catch (err) {
       console.error("Frame send error:", err);
     }
   };
 
-
   return (
-    <div className="card camera">
-      <h4>Camera Module</h4>
-
-      <div className="camera-box">
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          muted
-          className="camera-feed"/>
-        <canvas ref={canvasRef} style={{ display: "none" }} />
+    <>
+      {/* Video Feed */}
+      <div style={{width: '100%', height: '100%', position: 'relative'}}>
+         <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className="camera-feed-video" 
+            style={{ transform: "scaleX(-1)" }} // Mirror effect
+         />
+         <canvas ref={canvasRef} style={{ display: "none" }} />
+         
+         {/* Overlay */}
+         <div className="camera-overlay">
+           <div className="camera-status">
+              <span style={{
+                width: 8, height: 8, borderRadius: '50%', 
+                background: cameraStatus === 'Streaming' ? '#22c55e' : '#ef4444'
+              }}></span>
+              {cameraStatus === 'Streaming' ? 'Live Feed Active' : 'Feed Interrupted'}
+           </div>
+           
+           <div>
+              {cameraStatus === 'Streaming' ? <Wifi size={16} /> : <WifiOff size={16} />}
+           </div>
+         </div>
       </div>
-      <div style={{ marginTop: "14px", textAlign: "left" }}>
-        <p>
-          <strong>Status:</strong>{" "}
-          <span style={{ color: "#60a5fa" }}>{cameraStatus}</span>
-        </p>
-      </div>
-    </div>
+    </>
   );
 }
