@@ -8,6 +8,9 @@ import {
   Heart
 } from "lucide-react";
 
+// Context
+import { FatigueProvider } from "./context/FatigueContext";
+
 // Components
 import BodyTemperatureChart from "./components/BodyTemperatureChart";
 import HeartRateChart from "./components/HeartRateChart";
@@ -18,16 +21,10 @@ import FatigueStatus from "./components/FatigueStatus";
 import DrowsinessIndicators from "./components/DrowsinessIndicators";
 import { useFatigueData } from "./hooks/useFatigueData";
 
-function App() {
-  const [mounted, setMounted] = useState(false);
-  const { ml_fatigue_status } = useFatigueData(); // Get Global Status
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) return null;
-
+// Wrapper Component to access Context for Theme
+const DashboardContent = () => {
+  const { ml_fatigue_status } = useFatigueData(); 
+  
   // Determine Theme Class
   const themeClass = 
     ml_fatigue_status === "Fatigued" ? "theme-danger" : 
@@ -131,6 +128,22 @@ function App() {
         </div>
       </main>
     </div>
+  );
+};
+
+function App() {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+
+  return (
+      <FatigueProvider>
+          <DashboardContent />
+      </FatigueProvider>
   );
 }
 
