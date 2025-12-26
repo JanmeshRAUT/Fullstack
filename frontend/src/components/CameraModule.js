@@ -1,9 +1,16 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Wifi, WifiOff, UserMinus } from "lucide-react";
 import { useFatigueData } from "../hooks/useFatigueData";
+import { API_BASE } from "../api";
 
 export default function CameraModule() {
   const data = useFatigueData();
+    try {
+      const response = await fetch(`${API_BASE}/process_frame`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image_data: imageData }),
+      });
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const [cameraStatus, setCameraStatus] = useState("Idle");
@@ -52,7 +59,7 @@ export default function CameraModule() {
     const imageData = canvas.toDataURL("image/jpeg", 0.6);
 
     try {
-      const response = await fetch("http://127.0.0.1:5000/process_frame", {
+      const response = await fetch(`${API_BASE}/process_frame`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ image_data: imageData }),
