@@ -8,8 +8,8 @@ import traceback
 # --- CONFIGURATION ---
 ARDUINO_PORT = "COM6"
 BAUD_RATE = 115200
-BACKEND_URL = "https://your-app-name.onrender.com"  # <--- UPDATE THIS AFTER DEPLOYMENT
-API_ENDPOINT = f"{BACKEND_URL}/sensor_data/ingest"  # We will create this endpoint
+BACKEND_URL = "https://fatigue-backend-40t1.onrender.com"  
+API_ENDPOINT = f"{BACKEND_URL}/sensor_data/ingest"  
 
 def find_arduino():
     ports = list(serial.tools.list_ports.comports())

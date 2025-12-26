@@ -201,3 +201,35 @@ def reset_calibration():
         return jsonify({"message": "Calibration reset successfully", "status": "OK"}), 200
     except Exception as e:
          return jsonify({"error": str(e)}), 500
+
+@api_bp.route('/sensor_data/ingest', methods=['POST'])
+def ingest_sensor_data():
+    """
+    Receives raw sensor string from local bridge (bridge.py)
+    """
+    try:
+        data = request.get_json()
+        raw_string = data.get("raw_sensor_data", "")
+        
+        if not raw_string:
+            return jsonify({"error": "No data provided"}), 400
+
+        from sensors.serial_reader import parse_raw_sensor_string
+        
+        parsed = parse_raw_sensor_string(raw_string)
+        if parsed:
+            timestamp = int(time.time())
+            # Update Global State
+            from sensors.serial_reader import latest_sensor_data, sensor_data_history
+            
+            # Use lock if needed (though Python GIL often handles dict updates nicely)
+            # Importing lock would be better but keeping it simple for now
+            latest_sensor_data.update({**parsed, "timestamp": timestamp})
+            sensor_data_history.append(latest_sensor_data.copy())
+            
+            return jsonify({"status": "received", "data": parsed}), 200
+        else:
+            return jsonify({"status": "ignored", "reason": "parsing failed"}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
