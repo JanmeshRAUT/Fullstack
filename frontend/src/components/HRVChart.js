@@ -19,16 +19,12 @@ export default function HRVChart() {
         const res = await fetch("http://127.0.0.1:5000/combined_data");
         const data = await res.json();
         
-        // Get Heart Rate (0 if invalid)
         const currentHr = data.sensor?.hr || 0;
 
-        // 1. Update Raw Buffer (Keep last 20 readings ~ 10-20 seconds)
         let newBuffer = [...rawHrBuffer, currentHr];
         if (newBuffer.length > 20) newBuffer.shift(); 
         setRawHrBuffer(newBuffer);
 
-        // 2. Calculate Standard Deviation (HRV Proxy)
-        // Filter out zeros/noise for calculation
         const validReadings = newBuffer.filter(h => h > 40 && h < 200);
         
         let sdnn = 0;
@@ -38,7 +34,6 @@ export default function HRVChart() {
             sdnn = Math.sqrt(variance);
         }
 
-        // 3. Update Chart Data
         setHrvHistory(prev => {
            const time = prev.length > 0 ? prev[prev.length-1].time + 1 : 0;
            const newData = [...prev, { time, value: sdnn }];
@@ -51,7 +46,7 @@ export default function HRVChart() {
       }
     };
 
-    const interval = setInterval(fetchHR, 1000); // 1Hz update
+    const interval = setInterval(fetchHR, 1000); 
     return () => clearInterval(interval);
   }, [rawHrBuffer]);
 
@@ -98,8 +93,7 @@ export default function HRVChart() {
           />
         </AreaChart>
       </ResponsiveContainer>
-      
-      {/* METRIC OVERLAY */}
+
       <div style={{
           position: 'absolute', top: 10, right: 20, 
           textAlign: 'right', pointerEvents: 'none'

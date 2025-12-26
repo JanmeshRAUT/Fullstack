@@ -72,7 +72,6 @@ export default function HeartRateChart() {
         </AreaChart>
       </ResponsiveContainer>
 
-      {/* BPM METRIC OVERLAY */}
       <div style={{
           position: 'absolute', top: 10, right: 20, 
           textAlign: 'right', pointerEvents: 'none'

@@ -17,10 +17,8 @@ except Exception as e:
 
 
 app = Flask(__name__)
-# CORS is essential for the OPTIONS request and cross-origin communication
 CORS(app) 
 
-# ---------------- SENSOR DATA SECTION ----------------
 latest_sensor_data = {
     "temperature": None,
     "ax": None, "ay": None, "az": None,
@@ -37,7 +35,7 @@ def home():
 
 @app.route('/sensor_data', methods=['POST'])
 def post_sensor_data():
-    """Receives MPU6050 + temperature data from ESP/Arduino"""
+
     global latest_sensor_data, sensor_data_history
     try:
         data = request.get_json()
@@ -88,7 +86,7 @@ def post_sensor_data():
 
 @app.route('/sensor_data', methods=['GET'])
 def get_sensor_data():
-    """Return latest sensor packet"""
+
     if latest_sensor_data["temperature"] is None:
         return jsonify({"message": "No data yet", "data": None}), 200
     return jsonify(latest_sensor_data), 200
@@ -96,11 +94,8 @@ def get_sensor_data():
 
 @app.route('/sensor_data/history', methods=['GET'])
 def get_sensor_data_history():
-    """Return last 10 sensor packets"""
     return jsonify(list(sensor_data_history)), 200
 
-
-# ---------------- HEAD POSITION DETECTION SECTION ----------------
 head_position_data = {
     "position": "Center",
     "angle": 0.0,
@@ -109,12 +104,7 @@ head_position_data = {
 
 
 def calculate_head_position(ax, ay, az):
-    """
-    Sensitive tilt-based head position detection using accelerometer data.
-    Returns 'Left', 'Center', or 'Right' based on tilt angle.
-    """
     try:
-        # Compute Y-axis tilt angle from acceleration vector
         angle_y = math.degrees(math.atan2(ay, math.sqrt(ax**2 + az**2)))
 
         LEFT_THRESHOLD = -5 
@@ -136,7 +126,6 @@ def calculate_head_position(ax, ay, az):
 
 @app.route('/head_position', methods=['GET'])
 def get_head_position():
-    """Return current head position (Left/Center/Right)"""
     global head_position_data
 
     if latest_sensor_data["ax"] is None:
@@ -164,24 +153,18 @@ def get_head_position():
         return jsonify({"error": "Head position calculation failed"}), 500
 
 
-# ---------------- PERCLOS & YAWN DETECTION SECTION ----------------
 mp_face_mesh = mp.solutions.face_mesh
 face_mesh = mp_face_mesh.FaceMesh(
     max_num_faces=1, refine_landmarks=True, min_detection_confidence=0.5)
-
-# Eye Landmarks and Threshold
 LEFT_EYE = [33, 160, 158, 133, 153, 144]
 RIGHT_EYE = [362, 385, 387, 263, 373, 380]
 EYE_AR_THRESH = 0.25
 WINDOW_SIZE = 6
 
-# Mouth Landmarks and Threshold for Yawn Detection
-# Points: 13(top), 14(bottom), 78(left-outer), 308(right-outer)
 MOUTH_INNER = [13, 14, 78, 308]
-MAR_THRESH = 0.6  # Minimum fixed threshold (baseline)
-MAR_FRAME_COUNT = 3 # Consecutive frames mouth must be open to count as a yawn
+MAR_THRESH = 0.6  
+MAR_FRAME_COUNT = 3 
 
-# Global state
 eye_status_history = deque(maxlen=WINDOW_SIZE) 
 perclos_data = {
     "status": "No Face", 
@@ -193,7 +176,6 @@ perclos_data = {
 }
 yawn_frames_count = 0
 
-# per-face rolling MAR history (used to adapt threshold)
 mar_history = deque(maxlen=20)
 
 
@@ -211,9 +193,7 @@ def eye_aspect_ratio(eye):
 def mouth_aspect_ratio(mouth):
     if len(mouth) != 4:
         return 0.0
-    # Vertical distance: 13 (P0) and 14 (P1)
     vertical_dist = math.dist(mouth[0], mouth[1])
-    # Horizontal distance: 78 (P2) and 308 (P3)
     horizontal_dist = math.dist(mouth[2], mouth[3])
     
     if horizontal_dist == 0:
@@ -233,18 +213,13 @@ def process_frame():
             print("[FRAME ERROR] Missing image_data key.", flush=True)
             return jsonify({"error": "Missing image_data"}), 400
 
-        # 1. Decode Base64 string into raw bytes
         base64_string = data['image_data'].split(',')[1]
         image_bytes = base64.b64decode(base64_string)
         nparr = np.frombuffer(image_bytes, np.uint8)
-        
-        # 2. Decode raw bytes into an OpenCV image
         frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         if frame is None:
             raise ValueError("Could not decode image data into OpenCV frame.")
 
-        # 3. Perform MediaPipe processing
-        # Flip the frame back since the frontend mirrored it for display
         frame = cv2.flip(frame, 1) 
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         results = face_mesh.process(rgb)
@@ -257,7 +232,6 @@ def process_frame():
         if results.multi_face_landmarks:
             landmarks = results.multi_face_landmarks[0]
             
-            # --- EYE PROCESSING (PERCLOS) ---
             left = [(landmarks.landmark[i].x * w, landmarks.landmark[i].y * h) for i in LEFT_EYE]
             right = [(landmarks.landmark[i].x * w, landmarks.landmark[i].y * h) for i in RIGHT_EYE]
             current_ear = (eye_aspect_ratio(left) + eye_aspect_ratio(right)) / 2.0
@@ -266,30 +240,22 @@ def process_frame():
             perclos_val = (sum(eye_status_history) / max(1, len(eye_status_history))) * 100
             eye_status = "Closed" if eyes_closed else "Open"
             
-            # --- MOUTH PROCESSING (YAWN) ---
             mouth = [(landmarks.landmark[i].x * w, landmarks.landmark[i].y * h) for i in MOUTH_INNER]
             current_mar = mouth_aspect_ratio(mouth)
 
-            # Update rolling MAR history
             if current_mar > 0:
                 mar_history.append(current_mar)
 
-            # Compute adaptive threshold:
-            # - mean_mar: rolling mean (if available)
-            # - adaptive_thresh = max(MAR_THRESH, mean_mar * 1.3)
             mean_mar = float(np.mean(mar_history)) if len(mar_history) > 0 else 0.0
             adaptive_thresh = max(MAR_THRESH, mean_mar * 1.3) if mean_mar > 0 else MAR_THRESH
 
-            # Yawn detection with hysteresis / smoothing
             if current_mar > adaptive_thresh:
                 yawn_frames_count += 1
                 if yawn_frames_count >= MAR_FRAME_COUNT:
                     yawn_status = "Yawning"
                 else:
-                    # briefly opening -> 'Opening' (transitional)
                     yawn_status = "Opening"
             else:
-                # decay the counter slowly to avoid flicker
                 yawn_frames_count = max(0, yawn_frames_count - 1)
                 if yawn_frames_count >= MAR_FRAME_COUNT:
                     yawn_status = "Yawning"
@@ -298,7 +264,6 @@ def process_frame():
                 else:
                     yawn_status = "Closed"
 
-            # Update global data structure
             perclos_data = {
                 "status": eye_status,
                 "perclos": round(perclos_val, 1),
@@ -316,7 +281,6 @@ def process_frame():
                 flush=True
             )
         else:
-            # No face detected: clear history, reset counters
             eye_status_history.clear()
             yawn_frames_count = 0
             mar_history.clear()
@@ -345,6 +309,5 @@ def get_perclos():
     return jsonify(perclos_data), 200
 
 
-# ---------------- THREAD STARTUP ----------------
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=False)

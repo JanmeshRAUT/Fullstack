@@ -58,7 +58,6 @@ export default function BodyTemperatureChart() {
           </AreaChart>
         </ResponsiveContainer>
 
-        {/* METRIC OVERLAY */}
         <div style={{
             position: 'absolute', top: 10, right: 20, 
             textAlign: 'right', pointerEvents: 'none'

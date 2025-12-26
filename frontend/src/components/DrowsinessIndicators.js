@@ -32,7 +32,6 @@ export default function FatigueIndicator() {
   }, []);
 
   const evaluateFatigue = () => {
-    // 1. Prioritize ML Model Prediction
     if (data.ml_fatigue_status && data.ml_fatigue_status !== 'Unknown' && data.ml_fatigue_status !== 'Error') {
       const ml = data.ml_fatigue_status;
       if (ml === "Fatigued") return "HIGH";
@@ -40,7 +39,6 @@ export default function FatigueIndicator() {
       if (ml === "Alert") return "LOW";
     }
 
-    // 2. Fallback to Rule-Based System
     let level = "LOW";
 
     const temp = parseFloat(data.temperature) || 0;
@@ -66,17 +64,30 @@ export default function FatigueIndicator() {
 
   const level = evaluateFatigue();
 
+  const handleUserInteraction = () => {
+    if (audioRef.current) {
+      audioRef.current.play().then(() => {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+        console.log("Audio Context Unlocked");
+      }).catch(err => console.log("Audio unlock failed (harmless if already unlocked):", err));
+    }
+  };
 
   useEffect(() => {
     const prevLevel = prevLevelRef.current;
     const audio = audioRef.current;
 
+    console.log(`[Fatigue Logic] Level: ${level} | Prev: ${prevLevel}`); // DEBUG
+
     if (level === "HIGH" && prevLevel !== "HIGH" && audio) {
+      console.log("🚨 TRIGGERING ALARM SOUND!");
       audio.currentTime = 0;
-      audio.play().catch((err) => console.log("Audio play blocked:", err));
+      audio.play().catch((err) => console.error("Audio play BLOCKED by Browser:", err));
     }
 
     if ((level === "LOW" || level === "MEDIUM") && prevLevel === "HIGH" && audio) {
+        console.log("✅ SILENCING ALARM");
       audio.pause();
       audio.currentTime = 0;
     }
@@ -100,7 +111,7 @@ export default function FatigueIndicator() {
   const { label, icon } = getConfig(level);
 
   return (
-    <div className="fatigue-indicator-container">
+    <div className="fatigue-indicator-container" onClick={handleUserInteraction} style={{cursor: 'pointer'}} title="Click to enable sound">
       <div className={`fatigue-indicator ${level.toLowerCase()}`}>
         <div className="indicator-icon">{icon}</div>
         <span className="indicator-label">{label}</span>

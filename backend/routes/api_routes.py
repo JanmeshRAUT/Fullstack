@@ -138,10 +138,6 @@ def get_combined_data():
             if c_pitch > 10: v_label = "Down" 
             elif c_pitch < -10: v_label = "Up"
             
-            # DEBUG PRINT
-            if abs(c_pitch) > 5:
-                print(f"[VISION DEBUG] Pitch: {c_pitch:.2f} => {v_label}")
-            
             h_label = ""
             if c_yaw > 10: h_label = "Right" 
             elif c_yaw < -10: h_label = "Left"

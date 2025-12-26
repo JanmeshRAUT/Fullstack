@@ -5,7 +5,6 @@ import {
 } from "lucide-react";
 import { useFatigueData } from "../hooks/useFatigueData";
 
-/* === ML MODEL VISUALIZER === */
 export default function FatigueStatus() {
   const data = useFatigueData();
   
@@ -16,12 +15,9 @@ export default function FatigueStatus() {
     yawn_status = "None", 
     hr = 0,
     ml_fatigue_status = "Unknown",
-    ml_confidence = 0 // REAL CONFIDENCE from Backend
+    ml_confidence = 0 
   } = data || {};
 
-  // === 1. FEATURE VECTOR NORMALIZATION (Simulating Input Layer) ===
-  // Normalize inputs to 0-1 range for visualization
-  // Safe parsing with default 0
   const safePerclos = typeof perclos === 'number' ? perclos : 0;
   const safeHR = typeof hr === 'number' ? hr : 0;
   const safeTemp = typeof temperature === 'number' ? temperature : 0;
@@ -31,7 +27,6 @@ export default function FatigueStatus() {
   const normYawn = safeYawn === "Yawning" ? 1.0 : (safeYawn === "Opening" ? 0.5 : 0.0);
   const normHR = safeHR > 0 ? (safeHR > 100 ? (safeHR - 100)/50 : (safeHR < 60 ? (60-safeHR)/30 : 0)) : 0;
   
-  // Ensure non-negative and capped at 1
   const features = [
     { id: "f_perclos", label: "PERCLOS", value: normPerclos, raw: `${safePerclos.toFixed(1)}%` },
     { id: "f_yawn", label: "Yawn_Seq", value: normYawn, raw: safeYawn },
@@ -39,20 +34,24 @@ export default function FatigueStatus() {
     { id: "f_temp", label: "Temp_Delta", value: safeTemp > 37 ? (safeTemp - 37) : 0, raw: `${safeTemp.toFixed(1)}°C` }
   ];
   
-  // Custom Sort: PERCLOS and YAWN always first, then by value
   const sortedFeatures = [
       features.find(f => f.id === "f_perclos"),
       features.find(f => f.id === "f_yawn"),
       ...features.filter(f => f.id !== "f_perclos" && f.id !== "f_yawn").sort((a,b) => b.value - a.value)
   ];
 
-  // === 2. INFERENCE LOGIC (Visual Mapping) ===
   let predictedClass = "NORMAL";
-  let confidence = ml_confidence; // Use Real Confidence
-  let color = "low"; // low, medium, high (risk)
+  let confidence = ml_confidence; 
+  let color = "low"; 
+
+  const isNoFace = data.status === "No Face";
 
   if (ml_fatigue_status !== "Unknown" && ml_fatigue_status !== "Error") {
-      if (ml_fatigue_status === "Waiting...") {
+      if (isNoFace) {
+          predictedClass = "SEARCHING";
+          color = "medium";
+          confidence = 0.0;
+      } else if (ml_fatigue_status === "Waiting...") {
           predictedClass = "WAITING";
           color = "low";
           confidence = 0.0;
@@ -68,13 +67,11 @@ export default function FatigueStatus() {
       color = "low"; 
   }
 
-  // Formatting
   const confidencePct = (confidence * 100).toFixed(1);
 
   return (
     <div style={{display: 'flex', flexDirection: 'column', height: '100%', gap: '16px'}}>
       
-      {/* HEADER: MODEL INFO */}
       <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
           <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
              <Cpu size={16} color="#6366f1" />
@@ -86,7 +83,6 @@ export default function FatigueStatus() {
           </div>
       </div>
 
-      {/* PREDICTION CARD */}
       <div className={`prediction-box ${color}`} style={{
           background: color === 'high' ? '#fef2f2' : (color === 'medium' ? '#fffbeb' : '#f0fdf4'),
           border: `1px solid ${color === 'high' ? '#fecaca' : (color === 'medium' ? '#fde68a' : '#bbf7d0')}`,
@@ -104,7 +100,6 @@ export default function FatigueStatus() {
              </span>
           </div>
           
-          {/* CONFIDENCE BAR */}
           <div>
             <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '4px'}}>
                <span style={{fontSize: '0.7rem', color: '#64748b'}}>MODEL CONFIDENCE</span>
@@ -122,7 +117,6 @@ export default function FatigueStatus() {
           </div>
       </div>
 
-      {/* FEATURE IMPORTANCE LIST */}
       <div style={{flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column'}}>
         <div style={{fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', marginBottom: '8px', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '6px'}}>
            <Activity size={12} /> LIVE FEATURE WEIGHTS
@@ -136,7 +130,6 @@ export default function FatigueStatus() {
                        <span style={{fontSize: '0.75rem', fontWeight: 600, color: '#475569'}}>{feat.label}</span>
                        <span style={{fontSize: '0.7rem', fontFamily: 'monospace', color: '#0f172a'}}>{feat.raw}</span>
                    </div>
-                   {/* Feature Magnitude Bar */}
                    <div style={{width: '100%', display: 'flex', alignItems: 'center', gap: '8px'}}>
                        <div style={{flex: 1, height: '4px', background: '#f1f5f9', borderRadius: '2px'}}>
                           <div style={{

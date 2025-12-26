@@ -4,81 +4,47 @@ import { RoundedBox, Environment, ContactShadows } from "@react-three/drei";
 import { useHeadPosition } from "../hooks/useHeadPosition";
 import { useFatigueData } from "../hooks/useFatigueData";
 
-function HeadModel({ angles, fatigueStatus, mar }) {
+function HeadModel({ angles, fatigueStatus }) {
   const group = useRef();
-  const jawRef = useRef(); // Reference to the Jaw
   
   useFrame(() => {
-    // 1. Head Rotation
     if (group.current) {
-      // MAPPING: PITCH(X), YAW(Y), ROLL(Z)
-      const radX = (angles.x * Math.PI) / 180;
-      const radY = (-angles.y * Math.PI) / 180;
-      const radZ = (-angles.z * Math.PI) / 180;
-      group.current.rotation.set(radX, radY, radZ, 'YXZ');
-    }
-
-    // 2. Jaw Animation (Yawning/talking)
-    if (jawRef.current) {
-        // Map MAR (0 to 1.0) to Rotation (0 to 0.5 radians)
-        // Normal talk: MAR ~0.1 -> 0.05 rad
-        // Yawn: MAR ~0.6 -> 0.3 rad
-        // We act on 'X' axis rotation (opening mouth down)
-        const jawOpen = Math.min(0.6, mar) * 1.5; // Scale factor
-        jawRef.current.rotation.x = jawOpen;
+        const radX = (angles.x * Math.PI) / 180;
+        const radY = (-angles.y * Math.PI) / 180;
+        const radZ = (-angles.z * Math.PI) / 180;
+        group.current.rotation.set(radX, radY, radZ, 'YXZ');
     }
   });
 
-  // Eye Color based on Fatigue
   const eyeColor = fatigueStatus === "Fatigued" ? "#ef4444" : (fatigueStatus === "Drowsy" ? "#f59e0b" : "#10b981");
   const eyeScale = fatigueStatus === "Fatigued" ? 0.2 : (fatigueStatus === "Drowsy" ? 0.5 : 1);
 
   return (
     <group ref={group}>
-      {/* HEAD SHAPE */}
       <RoundedBox args={[1.4, 1.8, 1.2]} radius={0.3} smoothness={4}>
         <meshStandardMaterial color="#e2e8f0" roughness={0.3} metalness={0.1} />
       </RoundedBox>
-
-      {/* FACE PLATE (Visor area) */}
       <RoundedBox args={[1.1, 0.8, 0.1]} radius={0.1} smoothness={2} position={[0, 0, 0.61]}>
         <meshStandardMaterial color="#1e293b" roughness={0.2} metalness={0.8} />
       </RoundedBox>
 
-      {/* EYES */}
       <group position={[0, 0.1, 0.68]}>
-         {/* Left Eye */}
          <mesh position={[-0.25, 0, 0]} scale={[1, eyeScale, 1]}>
             <capsuleGeometry args={[0.08, 0.2, 4, 8]} />
             <meshStandardMaterial color={eyeColor} emissive={eyeColor} emissiveIntensity={2} />
          </mesh>
          
-         {/* Right Eye */}
          <mesh position={[0.25, 0, 0]} scale={[1, eyeScale, 1]}>
             <capsuleGeometry args={[0.08, 0.2, 4, 8]} />
             <meshStandardMaterial color={eyeColor} emissive={eyeColor} emissiveIntensity={2} />
          </mesh>
       </group>
 
-      {/* MOUTH (Simple Line on Face Plate - Stays with Head) */}
-      <mesh position={[0, -0.4, 0.61]}>
-         <boxGeometry args={[0.3, 0.05, 0.02]} />
-         <meshStandardMaterial color="#475569" />
+      <mesh position={[0, -0.4, 0.68]}>
+        <boxGeometry args={[0.3, 0.05, 0.02]} />
+        <meshStandardMaterial color="#475569" />
       </mesh>
-      
-      {/* JAW (Moving Part) - Anchored at ears almost */}
-      {/* We group it to pivot correctly */}
-      <group position={[0, -0.3, 0]} ref={jawRef}>
-          {/* Actual Jaw Mesh */}
-          <group position={[0, -0.5, 0]}> 
-               {/* Chin Area */}
-              <RoundedBox args={[1.0, 0.4, 1.0]} radius={0.1} smoothness={2}>
-                 <meshStandardMaterial color="#cbd5e1" roughness={0.4} />
-              </RoundedBox>
-          </group>
-      </group>
 
-      {/* EARS */}
       <RoundedBox args={[0.2, 0.6, 0.4]} radius={0.05} smoothness={2} position={[-0.75, 0, 0]}>
          <meshStandardMaterial color="#cbd5e1" />
       </RoundedBox>
@@ -86,30 +52,38 @@ function HeadModel({ angles, fatigueStatus, mar }) {
          <meshStandardMaterial color="#cbd5e1" />
       </RoundedBox>
       
-      {/* NECK (Static visual anchor - NOT in rotating group if we wanted realistic neck, but for this chart simpler to be in group or separate) */}
-      {/* If we put it OUTSIDE this group, it won't rotate with head (realistic).
-          If INSIDE, it tilts. Let's keep it minimal. */}
+      <cylinderGeometry args={[0.4, 0.5, 0.8, 32]} />
     </group>
   );
 }
 
 export default function HeadPositionChart() {
-  const { position, angle_x, angle_y, angle_z, source, calibrated, mar } = useHeadPosition(); // Need MAR here now
+  const { position, angle_x, angle_y, angle_z, source, calibrated } = useHeadPosition();
   const { ml_fatigue_status } = useFatigueData();
   
-  // Logic for display
   const showCalibration = source === "Vision (Fallback)" && calibrated === false;
+  const isInitializing = source === "None" || source === "Unknown";
+  const noFaceFound = ml_fatigue_status === "Unknown" && source === "Vision (Fallback)" && position === "Unknown";
+
+  React.useEffect(() => {
+    if (source === "Vision (Fallback)" && calibrated === true) {
+        try {
+            const audio = new Audio("/sounds/correct-356013.mp3");
+            audio.volume = 0.5;
+            audio.play().catch(e => console.error("Audio playback error:", e));
+        } catch (e) {
+            console.error("Audio initialization failed", e);
+        }
+    }
+  }, [calibrated, source]);
   
-  // Status Logic
   const isSafe = Math.abs(angle_x) < 20 && Math.abs(angle_y) < 30 && Math.abs(angle_z) < 20;
   const statusColor = isSafe ? "#10b981" : "#ef4444";
   const statusText = isSafe ? "SAFE" : "DISTRACTED";
 
-
   return (
     <div style={{ width: "100%", height: "100%", position: "relative", borderRadius: "12px", overflow: "hidden", background: "linear-gradient(to bottom, #f8fafc, #e2e8f0)" }}>
         
-        {/* OVERLAYS */}
         <div style={{ position: "absolute", top: 12, left: 16, zIndex: 10 }}>
             <div style={{fontSize: "1.5rem", fontWeight: 800, color: "#334155", lineHeight: 1}}>{position.toUpperCase()}</div>
             <div style={{fontSize: "0.7rem", color: "#64748b", fontWeight: 600}}>HEAD POSE</div>
@@ -119,16 +93,31 @@ export default function HeadPositionChart() {
             {source === "Vision (Fallback)" ? "VISION" : (source === "Sensor" ? "SENSOR" : "NONE")}
         </div>
 
-        {/* CALIBRATION OVERLAY */}
-        {showCalibration && (
-            <div style={{ position: 'absolute', inset: 0, zIndex: 50, background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(4px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                <div className="animate-spin" style={{ width: 32, height: 32, border: '4px solid #e2e8f0', borderTopColor: '#3b82f6', borderRadius: '50%', marginBottom: 12 }}></div>
-                <div style={{fontSize: '1rem', fontWeight: 800, color: '#0f172a'}}>CALIBRATING</div>
-                <div style={{fontSize: '0.75rem', fontWeight: 500, color: '#64748b'}}>Look at screen...</div>
+        {isInitializing && (
+            <div style={{ position: 'absolute', inset: 0, zIndex: 55, background: 'rgba(241, 245, 249, 0.95)', backdropFilter: 'blur(8px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+                <div className="animate-spin" style={{ width: 40, height: 40, border: '4px solid #e2e8f0', borderTopColor: '#6366f1', borderRadius: '50%' }}></div>
+                <div style={{ textAlign: 'center' }}>
+                    <div style={{fontSize: '0.9rem', fontWeight: 800, color: '#1e293b', letterSpacing: '1px'}}>INITIALIZING</div>
+                    <div style={{fontSize: '0.65rem', fontWeight: 600, color: '#94a3b8'}}>WAITING FOR SENSORS...</div>
+                </div>
             </div>
         )}
 
-        {/* 3D SCENE */}
+        {showCalibration && !isInitializing && (
+            <div style={{ position: 'absolute', inset: 0, zIndex: 50, background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(4px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                <div className="animate-pulse" style={{ width: 32, height: 32, border: '4px solid #e2e8f0', borderTopColor: '#3b82f6', borderRadius: '50%', marginBottom: 12 }}></div>
+                <div style={{fontSize: '1rem', fontWeight: 800, color: '#0f172a'}}>CALIBRATING</div>
+                <div style={{fontSize: '0.75rem', fontWeight: 500, color: '#64748b'}}>Look straight at the camera...</div>
+            </div>
+        )}
+
+        {noFaceFound && !isInitializing && !showCalibration && (
+            <div style={{ position: 'absolute', inset: 0, zIndex: 45, background: 'rgba(248, 250, 252, 0.8)', backdropFilter: 'blur(4px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '2px dashed #cbd5e1', margin: '12px', borderRadius: '12px' }}>
+                <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#64748b', letterSpacing: '0.5px' }}>NO FACE DETECTED</div>
+                <div style={{ fontSize: '0.65rem', fontWeight: 500, color: '#94a3b8', marginTop: '4px' }}>ENSURE FACE IS VISIBLE</div>
+            </div>
+        )}
+
         <Canvas camera={{ position: [0, 0, 4], fov: 50 }}>
             <ambientLight intensity={0.5} />
             <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={1} castShadow />
@@ -137,14 +126,13 @@ export default function HeadPositionChart() {
             <HeadModel 
                 angles={{ x: angle_x, y: angle_y, z: angle_z }} 
                 fatigueStatus={ml_fatigue_status} 
-                mar={mar}
             />
             
             <ContactShadows position={[0, -1.4, 0]} opacity={0.4} scale={10} blur={2.5} far={4} />
             <Environment preset="city" />
         </Canvas>
 
-        {/* BOTTOM HUD */}
+
         <div style={{ position: "absolute", bottom: 12, left: 12, right: 12, display: "flex", justifyContent: "space-between", alignItems: "flex-end", pointerEvents: "none" }}>
              <div style={{ display: "flex", flexDirection: "column", gap: 2, fontSize: "0.65rem", fontFamily: "monospace", color: "#64748b" }}>
                  <div>P: <span style={{color: '#334155', fontWeight: 700}}>{angle_x.toFixed(0)}°</span></div>

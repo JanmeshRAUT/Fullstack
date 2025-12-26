@@ -10,10 +10,12 @@ from cv.head_pose import calculate_cv_head_pose, cv_head_angles, cv_angles_lock
 # --- Constants & Configuration ---
 LEFT_EYE = [33, 160, 158, 133, 153, 144]
 RIGHT_EYE = [362, 385, 387, 263, 373, 380]
-EYE_AR_THRESH = 0.25
+EYE_AR_THRESH = 0.30
 MOUTH_INNER = [13, 14, 78, 308]
 MAR_THRESH = 0.6
+MAR_THRESH = 0.6
 MAR_FRAME_COUNT = 3
+STABILITY_THRESH = 0.05 # Max allowed normalized movement per frame (5% of screen)
 
 # --- State ---
 perclos_data = {
@@ -28,7 +30,10 @@ perclos_data = {
 
 eye_status_history = deque(maxlen=6)
 yawn_frames_count = 0
+closed_frames_count = 0
+closed_frames_count = 0
 mar_history = deque(maxlen=20)
+prev_nose_pos = None # For motion/shake detection
 
 # --- MediaPipe Initialization ---
 mp_face_mesh = mp.solutions.face_mesh
@@ -59,7 +64,7 @@ def process_face_mesh(frame):
     Processes a frame using MediaPipe FaceMesh to update PERCLOS, Yawn, and Head Pose.
     Updates global state: perclos_data, cv_head_angles.
     """
-    global perclos_data, eye_status_history, yawn_frames_count, mar_history
+    global perclos_data, eye_status_history, yawn_frames_count, mar_history, closed_frames_count, prev_nose_pos
     now = int(time.time())
 
     h, w, _ = frame.shape
@@ -68,6 +73,21 @@ def process_face_mesh(frame):
 
     if results.multi_face_landmarks:
         lm = results.multi_face_landmarks[0]
+        
+        # --- 1. MOTION STABILITY CHECK ---
+        # Detect if face/camera is shaking violently (e.g. driving on bumps)
+        # If shaking, we cannot trust delicate Eye Aspect Ratio (EAR).
+        nose = lm.landmark[1] # Tip of nose
+        current_nose_pos = np.array([nose.x, nose.y])
+        is_stable = True
+        
+        if prev_nose_pos is not None:
+            dist = np.linalg.norm(current_nose_pos - prev_nose_pos)
+            if dist > STABILITY_THRESH:
+                is_stable = False
+                print(f"[CV STABILITY] ⚠️ Unstable Frame (Dist: {dist:.3f}). Ignoring Eye Data.")
+        
+        prev_nose_pos = current_nose_pos
         
         # --- CV HEAD POSE FALLBACK ---
         try:
@@ -84,8 +104,20 @@ def process_face_mesh(frame):
         left = [(lm.landmark[i].x * w, lm.landmark[i].y * h) for i in LEFT_EYE]
         right = [(lm.landmark[i].x * w, lm.landmark[i].y * h) for i in RIGHT_EYE]
         ear = (eye_aspect_ratio(left) + eye_aspect_ratio(right)) / 2
-        eyes_closed = 1 if ear < EYE_AR_THRESH else 0
+        
+        # LOGIC: If Unstable, Force Eyes 'Open' to prevent False Positive Fatigue
+        if is_stable:
+             eyes_closed = 1 if ear < EYE_AR_THRESH else 0
+        else:
+             eyes_closed = 0 # Force Open if shaking
+             
         eye_status_history.append(eyes_closed)
+        
+        if eyes_closed:
+            closed_frames_count += 1
+        else:
+            closed_frames_count = 0
+
         perclos_val = (sum(eye_status_history) / len(eye_status_history)) * 100
 
         # --- YAWN / MAR ---
@@ -103,19 +135,28 @@ def process_face_mesh(frame):
             yawn_frames_count = max(0, yawn_frames_count - 1)
             yawn_status = "Closed" if yawn_frames_count == 0 else "Relaxing"
 
+            yawn_status = "Closed" if yawn_frames_count == 0 else "Relaxing"
+
+        status_label = "Closed" if eyes_closed else "Open"
+        if not is_stable:
+            status_label = "Unstable"
+
         perclos_data.update({
-            "status": "Closed" if eyes_closed else "Open",
+            "status": status_label,
             "perclos": round(perclos_val, 1),
             "ear": round(ear, 3),
             "yawn_status": yawn_status,
             "mar": round(mar, 3),
             "adaptive_mar_thresh": round(adaptive_thresh, 3),
-            "timestamp": now
+            "timestamp": now,
+            "closed_frames": closed_frames_count
         })
     else:
         # No face detected
+        prev_nose_pos = None # Reset motion tracking
         eye_status_history.clear()
         yawn_frames_count = 0
+        closed_frames_count = 0
         mar_history.clear()
         perclos_data.update({
             "status": "No Face",
@@ -128,3 +169,4 @@ def process_face_mesh(frame):
         })
 
     return perclos_data
+

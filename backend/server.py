@@ -12,7 +12,6 @@ CORS(app)
 # Register Blueprints
 app.register_blueprint(api_bp)
 
-# ------------------ RUN SERVER ------------------
 if __name__ == '__main__':
     start_serial_thread()
     app.run(host='0.0.0.0', port=5000, debug=False)

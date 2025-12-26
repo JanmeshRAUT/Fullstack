@@ -1,10 +1,14 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Wifi, WifiOff } from "lucide-react";
+import { Wifi, WifiOff, UserMinus } from "lucide-react";
+import { useFatigueData } from "../hooks/useFatigueData";
 
 export default function CameraModule() {
+  const data = useFatigueData();
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const [cameraStatus, setCameraStatus] = useState("Idle");
+
+  const noFaceDetected = data.status === "No Face";
 
   useEffect(() => {
     let stream;
@@ -19,7 +23,6 @@ export default function CameraModule() {
           setCameraStatus("Streaming");
         }
 
-        // Send frames to Flask backend
         frameInterval = setInterval(() => {
           sendFrameToBackend();
         }, 800);
@@ -62,33 +65,54 @@ export default function CameraModule() {
 
   return (
     <>
-      {/* Video Feed */}
-      <div style={{width: '100%', height: '100%', position: 'relative'}}>
-         <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            muted
-            className="camera-feed-video" 
-            style={{ transform: "scaleX(-1)" }} // Mirror effect
-         />
-         <canvas ref={canvasRef} style={{ display: "none" }} />
-         
-         {/* Overlay */}
-         <div className="camera-overlay">
-           <div className="camera-status">
-              <span style={{
-                width: 8, height: 8, borderRadius: '50%', 
-                background: cameraStatus === 'Streaming' ? '#22c55e' : '#ef4444'
-              }}></span>
-              {cameraStatus === 'Streaming' ? 'Live Feed Active' : 'Feed Interrupted'}
-           </div>
-           
-           <div>
-              {cameraStatus === 'Streaming' ? <Wifi size={16} /> : <WifiOff size={16} />}
-           </div>
-         </div>
+      <div style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden', borderRadius: '12px' }}>
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          className="camera-feed-video"
+          style={{ transform: "scaleX(-1)", width: '100%', height: '100%', objectFit: 'cover' }}
+        />
+        <canvas ref={canvasRef} style={{ display: "none" }} />
+
+        {/* NO FACE DETECTED OVERLAY */}
+        {noFaceDetected && cameraStatus === 'Streaming' && (
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'rgba(239, 68, 68, 0.2)', 
+            backdropFilter: 'blur(2px)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 20
+          }}>
+            <div className="animate-pulse" style={{ background: '#ef4444', padding: '8px 16px', borderRadius: '8px', color: 'white', fontWeight: 800, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(239, 68, 68, 0.4)' }}>
+              <UserMinus size={18} strokeWidth={3} />
+              NO FACE DETECTED
+            </div>
+            <span style={{ color: 'white', fontSize: '0.7rem', fontWeight: 600, marginTop: '8px', textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>Center yourself in the frame</span>
+          </div>
+        )}
+
+        {/* Overlay HUD */}
+        <div className="camera-overlay">
+          <div className="camera-status">
+            <span style={{
+              width: 8, height: 8, borderRadius: '50%',
+              background: cameraStatus === 'Streaming' ? (noFaceDetected ? '#f59e0b' : '#22c55e') : '#ef4444'
+            }}></span>
+            {cameraStatus === 'Streaming' ? (noFaceDetected ? 'Searching...' : 'Live Feed Active') : 'Feed Interrupted'}
+          </div>
+
+          <div>
+            {cameraStatus === 'Streaming' ? <Wifi size={16} /> : <WifiOff size={16} />}
+          </div>
+        </div>
       </div>
     </>
   );
 }
+
