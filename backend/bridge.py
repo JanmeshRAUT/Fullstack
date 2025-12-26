@@ -48,8 +48,8 @@ def bridge():
                     # POST to Cloud
                     # Note: We need to implement /ingest endpoint in server.py
                     # For now, let's just print what we WOULLD do
-                    # response = requests.post(API_ENDPOINT, json=payload, timeout=2)
-                    pass
+                    response = requests.post(API_ENDPOINT, json=payload, timeout=2)
+                    # pass
                 except Exception as req_e:
                     print(f"⚠️ Cloud Upload Failed: {req_e}")
 

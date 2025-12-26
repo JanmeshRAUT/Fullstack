@@ -29,6 +29,14 @@ ML_INTERVAL = 0.5
 def home():
     return "✅ Flask Sensor + PERCLOS + Head Position (Wired Mode)", 200
 
+@api_bp.route('/health', methods=['GET'])
+def health_check():
+    return jsonify({
+        "status": "ok",
+        "timestamp": int(time.time()), 
+        "service": "fatiguered-backend"
+    }), 200
+
 @api_bp.route('/sensor_data', methods=['GET'])
 def get_sensor_data():
     if latest_sensor_data["temperature"] is None:
