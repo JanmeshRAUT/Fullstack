@@ -5,12 +5,7 @@ import { API_BASE } from "../api";
 
 export default function CameraModule() {
   const data = useFatigueData();
-    try {
-      const response = await fetch(`${API_BASE}/process_frame`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image_data: imageData }),
-      });
+
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const [cameraStatus, setCameraStatus] = useState("Idle");
