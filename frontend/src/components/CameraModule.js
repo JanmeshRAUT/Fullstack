@@ -47,11 +47,15 @@ export default function CameraModule() {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
 
-    canvas.width = videoRef.current.videoWidth;
-    canvas.height = videoRef.current.videoHeight;
+    // OPTIMIZATION: Downscale image to 480px width to prevent Backend Worker Timeout/Crash
+    const scaleFactor = 480 / videoRef.current.videoWidth;
+    canvas.width = 480; 
+    canvas.height = videoRef.current.videoHeight * scaleFactor;
+    
     ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
 
-    const imageData = canvas.toDataURL("image/jpeg", 0.6);
+    // Compress to JPEG 0.5 quality (further reduces payload size)
+    const imageData = canvas.toDataURL("image/jpeg", 0.5);
 
     try {
       const response = await fetch(`${API_BASE}/process_frame`, {
