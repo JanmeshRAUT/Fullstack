@@ -89,8 +89,35 @@ export default function HeadPositionChart() {
             <div style={{fontSize: "0.7rem", color: "#64748b", fontWeight: 600}}>HEAD POSE</div>
         </div>
 
-        <div style={{ position: "absolute", top: 8, right: 8, padding: "2px 6px", borderRadius: "4px", background: "rgba(255,255,255,0.8)", border: "1px solid #cbd5e1", color: "#64748b", fontSize: "0.6rem", fontWeight: 700, zIndex: 10 }}>
-            {source === "Vision (Fallback)" ? "VISION" : (source === "Sensor" ? "SENSOR" : "NONE")}
+        <div style={{ position: "absolute", top: 8, right: 8, display: "flex", gap: "6px", alignItems: "center", zIndex: 10 }}>
+            {/* RESET BUTTON for Cloud Calibration */}
+            <button 
+                onClick={async (e) => {
+                    e.stopPropagation();
+                    const { resetCalibration } = await import("../api");
+                    await resetCalibration();
+                }}
+                title="Reset Calibration"
+                style={{
+                    background: "rgba(255,255,255,0.7)", 
+                    border: "1px solid #cbd5e1", 
+                    borderRadius: "4px", 
+                    padding: "2px 6px", 
+                    cursor: "pointer",
+                    fontSize: "0.6rem", 
+                    fontWeight: 700,
+                    color: "#3b82f6",
+                    transition: "all 0.2s"
+                }}
+                onMouseEnter={(e) => e.target.style.background = "#fff"}
+                onMouseLeave={(e) => e.target.style.background = "rgba(255,255,255,0.7)"}
+            >
+                ↻
+            </button> 
+
+            <div style={{ padding: "2px 6px", borderRadius: "4px", background: "rgba(255,255,255,0.8)", border: "1px solid #cbd5e1", color: "#64748b", fontSize: "0.6rem", fontWeight: 700 }}>
+                {source === "Vision (Fallback)" ? "VISION" : (source === "Sensor" ? "SENSOR" : "NONE")}
+            </div>
         </div>
 
         {isInitializing && (

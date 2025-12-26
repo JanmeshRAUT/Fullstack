@@ -44,3 +44,13 @@ export async function getLatestTemperature() {
     return null;
   }
 }
+
+export const resetCalibration = async () => {
+    try {
+        await axios.post(`${API_BASE}/reset_calibration`);
+        return true;
+    } catch (err) {
+        console.error("Calibration reset failed:", err);
+        return false;
+    }
+};
