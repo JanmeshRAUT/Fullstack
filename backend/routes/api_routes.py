@@ -187,3 +187,17 @@ def get_combined_data():
         "prediction": cached_prediction,
         "server_time": int(time.time())
     }), 200
+
+@api_bp.route('/reset_calibration', methods=['POST'])
+def reset_calibration():
+    try:
+        with ml_lock:
+            ml_engine.reset_calibration()
+            
+            # Also reset vision calibration if it exists
+            with cv_angles_lock:
+                 cv_head_angles["is_calibrated"] = False
+                 
+        return jsonify({"message": "Calibration reset successfully", "status": "OK"}), 200
+    except Exception as e:
+         return jsonify({"error": str(e)}), 500

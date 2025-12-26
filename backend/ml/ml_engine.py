@@ -54,6 +54,15 @@ class MLEngine:
         except Exception as e:
             print(f"[ML] ❌ Failed to load model: {e}")
 
+    def reset_calibration(self):
+        """Resets the adaptive baseline for a new user/session."""
+        self.base_ear = 0.32
+        self.calibration_frames = 0
+        self.history.clear()
+        self.ema_probs = None
+        self.current_state = 0
+        print("[ML] 🔄 Calibration Reset!")
+
     def calculate_temporal_features(self, current_data):
         """Computes rolling mean/std from history."""
         self.history.append(current_data)
