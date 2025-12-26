@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { API_BASE } from '../api';
 
 export const useCombinedData = () => {
   const [data, setData] = useState({
@@ -13,8 +14,8 @@ export const useCombinedData = () => {
     const fetchData = async () => {
       try {
         const [sensorRes, perclosRes] = await Promise.all([
-          fetch('http://localhost:5000/sensor_data'),
-          fetch('http://localhost:5000/perclos')
+          fetch(`${API_BASE}/sensor_data`),
+          fetch(`${API_BASE}/perclos`)
         ]);
 
         const sensorData = await sensorRes.json();

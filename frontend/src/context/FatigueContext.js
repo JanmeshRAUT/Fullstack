@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { API_BASE } from '../api';
 
 const FatigueContext = createContext();
 
@@ -26,8 +27,8 @@ export const FatigueProvider = ({ children }) => {
         const fetchData = async () => {
             try {
                 // FETCH ONCE for the entire app!
-                // http://localhost:5000/combined_data contains sensor, perclos, head_position, prediction
-                const response = await fetch("http://localhost:5000/combined_data");
+                // Combined data contains sensor, perclos, head_position, prediction
+                const response = await fetch(`${API_BASE}/combined_data`);
                 if (!response.ok) throw new Error("Network response was not ok");
                 
                 const json = await response.json();
