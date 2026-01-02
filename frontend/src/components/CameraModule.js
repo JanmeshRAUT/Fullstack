@@ -60,7 +60,10 @@ export default function CameraModule() {
     try {
       const response = await fetch(`${API_BASE}/process_frame`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+            "Content-Type": "application/json",
+            "ngrok-skip-browser-warning": "69420"
+        },
         body: JSON.stringify({ image_data: imageData }),
       });
       if (!response.ok) throw new Error("Failed");

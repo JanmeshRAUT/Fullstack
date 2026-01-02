@@ -277,3 +277,64 @@
   .card { min-height: 320px; }
   .camera-card { height: auto; aspect-ratio: 16/9; }
 }
+
+/* === MOBILE OPTIMIZATION (Phone) === */
+@media (max-width: 768px) {
+  .top-header {
+    padding: 0 16px;
+    height: 60px;
+  }
+  .brand-name { font-size: 1rem; }
+  .header-actions .status-badge { display: none; } /* Hide status text on small screens */
+
+  .dashboard-content {
+    padding: 12px;
+    gap: 16px;
+  }
+
+  .grid-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* REORDER: Camera & Status FIRST */
+  .side-panel {
+    order: -1; 
+    gap: 16px;
+  }
+
+  .charts-section {
+    gap: 16px;
+  }
+  
+  .charts-row-1, .charts-row-2 {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* Make charts smaller on mobile to fit screen */
+  .card {
+    min-height: auto; 
+    height: auto;
+    padding: 16px;
+  }
+  
+  .chart-body-fill {
+    height: 200px; /* Fixed height for charts on mobile */
+  }
+
+  /* Camera Card */
+  .camera-card {
+    height: auto;
+    aspect-ratio: 4/3; /* Portrait-ish ratio */
+    border-radius: 12px;
+  }
+  
+  /* Status Card */
+  .fatigue-score-large { font-size: 3rem; }
+  
+  /* Fix overflow issues */
+  body { overflow-x: hidden; }
+}

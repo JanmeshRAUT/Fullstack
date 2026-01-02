@@ -120,36 +120,56 @@ def update_head_position_data():
 
 def serial_reader():
     global latest_sensor_data, sensor_data_history
-    try:
-        port = find_arduino_port()
-        ser = serial.Serial(port=port, baudrate=115200, timeout=1)
-        print(f"[SERIAL] ✅ Connected to {port}")
-        
-        while True:
-            try:
-                if ser.in_waiting > 0:
-                    line = ser.readline().decode('utf-8', errors='ignore').strip()
-                    if not line:
-                        continue
-                        
-                    print(f"\n[ARDUINO RAW] >>> {line}") 
-                    
-                    parsed = parse_raw_sensor_string(line)
-                    if not parsed:
-                        continue
-
-                    timestamp = int(time.time())
-                    with sensor_lock:
-                        latest_sensor_data.update({**parsed, "timestamp": timestamp})
-                        sensor_data_history.append(latest_sensor_data.copy())
+    print("[SERIAL] ⏳ Starting Serial Monitor Thread...")
+    
+    while True: # SUPER LOOP: Handles Reconnection
+        ser = None
+        try:
+            port = find_arduino_port()
+            print(f"[SERIAL] 🔌 Attempting to connect to {port}...")
+            ser = serial.Serial(port=port, baudrate=115200, timeout=1)
+            print(f"[SERIAL] ✅ Connected to {port}")
             
-            except Exception as loop_e:
-                print(f"[SERIAL LOOP ERROR] {loop_e}")
-                time.sleep(1)
+            # INNER LOOP: Read Data
+            while True:
+                try:
+                    if ser.in_waiting > 0:
+                        line = ser.readline().decode('utf-8', errors='ignore').strip()
+                        if line:
+                            print(f"\n[ARDUINO RAW] >>> {line}")
+                            parsed = parse_raw_sensor_string(line)
+                            if parsed:
+                                timestamp = int(time.time())
+                                with sensor_lock:
+                                    latest_sensor_data.update({**parsed, "timestamp": timestamp})
+                                    sensor_data_history.append(latest_sensor_data.copy())
+                    
+                    # --- WATCHDOG: STALE DATA CHECK (Keep Existing Logic) ---
+                    with sensor_lock:
+                        last_ts = latest_sensor_data.get("timestamp")
+                        # 5s timeout
+                        if last_ts and (int(time.time()) - last_ts > 5):
+                             print("[SERIAL WATCHDOG] ⚠️ Data Stale (>5s). Resetting Sensor State.")
+                             for k in ["temperature", "hr", "spo2", "ax", "ay", "az"]:
+                                 latest_sensor_data[k] = None
+                             latest_sensor_data["timestamp"] = int(time.time())
 
-    except Exception as e:
-        print(f"[SERIAL CONNECTION ERROR] {e}")
-        traceback.print_exc()
+                except Exception as read_error:
+                    print(f"[SERIAL READ ERROR] {read_error} -> Reconnecting...")
+                    break # Break Inner Loop -> Trigger Reconnect
+                
+                time.sleep(0.01) # Tiny sleep to save CPU
+
+        except Exception as e:
+            print(f"[SERIAL CONNECTION ERROR] {e} -> Retrying in 3s...")
+            time.sleep(3)
+        
+        finally:
+            if ser and ser.is_open:
+                try:
+                    ser.close()
+                except:
+                    pass
 
 def start_serial_thread():
     t = threading.Thread(target=serial_reader, daemon=True)
