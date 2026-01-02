@@ -28,7 +28,13 @@ export const FatigueProvider = ({ children }) => {
             try {
                 // FETCH ONCE for the entire app!
                 // Combined data contains sensor, perclos, head_position, prediction
-                const response = await fetch(`${API_BASE}/combined_data`);
+                // Combined data contains sensor, perclos, head_position, prediction
+                const response = await fetch(`${API_BASE}/combined_data`, {
+                    headers: {
+                        "ngrok-skip-browser-warning": "69420",
+                        "Content-Type": "application/json"
+                    }
+                });
                 if (!response.ok) throw new Error("Network response was not ok");
                 
                 const json = await response.json();

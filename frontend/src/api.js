@@ -3,6 +3,9 @@ import axios from "axios";
 // export const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000"; // Backend URL (Vercel ENV or Local)
 export const API_BASE = "https://nulliporous-carbolic-lianne.ngrok-free.dev";
 
+// BYPASS NGROK WARNING PAGE
+axios.defaults.headers.common['ngrok-skip-browser-warning'] = 'true';
+
 export const getTemperature = async () => {
   try {
     const res = await axios.get(`${API_BASE}/temperature`);
@@ -35,7 +38,9 @@ export const getPerclos = async () => {
 
 export async function getLatestTemperature() {
   try {
-    const response = await fetch(`${API_BASE}/temperature/latest`);
+    const response = await fetch(`${API_BASE}/temperature/latest`, {
+        headers: { "ngrok-skip-browser-warning": "true" }
+    });
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
