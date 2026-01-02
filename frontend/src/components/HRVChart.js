@@ -8,10 +8,13 @@ import {
   Tooltip,
   ResponsiveContainer
 } from "recharts";
+import { useTheme } from "../context/ThemeContext";
+import "./Css/HRVChart.css";
 
 export default function HRVChart() {
   const [hrvHistory, setHrvHistory] = useState([]);
   const [rawHrBuffer, setRawHrBuffer] = useState([]);
+  const { isDarkMode } = useTheme();
 
   useEffect(() => {
     const fetchHR = async () => {
@@ -51,7 +54,7 @@ export default function HRVChart() {
   }, [rawHrBuffer]);
 
   return (
-    <div style={{ width: "100%", height: "100%" }}>
+    <div className="hrv-container">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={hrvHistory} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
           <defs>
@@ -60,10 +63,10 @@ export default function HRVChart() {
               <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#000" strokeOpacity={0.05} />
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDarkMode ? '#475569' : '#000'} strokeOpacity={0.05} />
           <XAxis 
              dataKey="time" 
-             tick={{fontSize: 10, fill: '#cbd5e1'}} 
+             tick={{fontSize: 10, fill: isDarkMode ? '#94a3b8' : '#cbd5e1'}} 
              tickLine={false}
              axisLine={false}
           />
@@ -73,10 +76,11 @@ export default function HRVChart() {
           />
           <Tooltip 
              contentStyle={{
-                backgroundColor: '#fff',
-                border: '1px solid #e2e8f0',
+                backgroundColor: isDarkMode ? '#1e293b' : '#fff',
+                border: `1px solid ${isDarkMode ? '#475569' : '#e2e8f0'}`,
                 borderRadius: '6px',
-                fontSize: '12px'
+                fontSize: '12px',
+                color: isDarkMode ? '#f1f5f9' : '#0f172a'
              }}
              formatter={(val) => [`${val.toFixed(1)}`, 'HRV (SDNN)']}
              labelStyle={{display: 'none'}}
@@ -94,14 +98,11 @@ export default function HRVChart() {
         </AreaChart>
       </ResponsiveContainer>
 
-      <div style={{
-          position: 'absolute', top: 10, right: 20, 
-          textAlign: 'right', pointerEvents: 'none'
-      }}>
-          <div style={{fontSize: '1.8rem', fontWeight: 800, color: '#8b5cf6', lineHeight: 1}}>
+      <div className="hrv-display">
+          <div className="hrv-value">
              {hrvHistory.length > 0 ? hrvHistory[hrvHistory.length-1].value.toFixed(1) : "--"}
           </div>
-          <div style={{fontSize: '0.75rem', fontWeight: 600, color: '#94a3b8'}}>ms (SDNN)</div>
+          <div className="hrv-label">ms (SDNN)</div>
       </div>
     </div>
   );

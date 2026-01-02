@@ -1,5 +1,5 @@
 .warning {
-  color: #ef4444;
+  color: var(--alarm-red);
   font-weight: 600;
 }
 
@@ -7,26 +7,32 @@
   font-size: 0.875rem;
   margin-left: 8px;
   font-style: italic;
+  color: var(--text-muted);
+  transition: color 0.3s ease;
 }
 
 .status-reason {
   margin-top: 8px;
   font-size: 0.875rem;
-  color: #666;
+  color: var(--text-muted);
   font-style: italic;
+  transition: color 0.3s ease;
 }
 
 .fatigue-status.high {
-  background-color: #fee2e2;
-  border-color: #ef4444;
+  background-color: var(--danger-bg);
+  border-color: var(--alarm-red);
+  transition: all 0.3s ease;
 }
 
 .fatigue-status.medium {
-  background-color: #fef3c7;
-  border-color: #f59e0b;
+  background-color: var(--warning-bg);
+  border-color: var(--alert-orange);
+  transition: all 0.3s ease;
 }
 
 .fatigue-status.low {
-  background-color: #dcfce7;
-  border-color: #10b981;
+  background-color: var(--success-bg);
+  border-color: var(--valid-green);
+  transition: all 0.3s ease;
 }

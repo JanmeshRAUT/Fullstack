@@ -1,13 +1,24 @@
-import React from "react";
 import { 
   Activity,
-  Cpu
+  Cpu,
+  RotateCcw
 } from "lucide-react";
 import { useFatigueData } from "../hooks/useFatigueData";
+import { useTheme } from "../context/ThemeContext";
+import { resetCalibration } from "../api";
+import "./Css/FatigueStatus.css";
 
 export default function FatigueStatus() {
   const data = useFatigueData();
+  const { isDarkMode } = useTheme();
   
+  const handleReset = async () => {
+    const success = await resetCalibration();
+    if (success) {
+      alert("Calibration reset! Please look at the camera.");
+    }
+  };
+
   // Destructure Data
   const { 
     temperature = 0, 
@@ -15,7 +26,9 @@ export default function FatigueStatus() {
     yawn_status = "None", 
     hr = 0,
     ml_fatigue_status = "Unknown",
-    ml_confidence = 0 
+    ml_confidence = 0,
+    ml_flag = null,
+    system_status = "Active"
   } = data || {};
 
   const safePerclos = typeof perclos === 'number' ? perclos : 0;
@@ -45,8 +58,13 @@ export default function FatigueStatus() {
   let color = "low"; 
 
   const isNoFace = data.status === "No Face";
+  const isInitializing = system_status === "Initializing";
 
-  if (ml_fatigue_status !== "Unknown" && ml_fatigue_status !== "Error") {
+  if (isInitializing) {
+     predictedClass = "CALIBRATING";
+     color = "info"; // New color type
+     confidence = 0.0;
+  } else if (ml_fatigue_status !== "Unknown" && ml_fatigue_status !== "Error") {
       if (isNoFace) {
           predictedClass = "SEARCHING";
           color = "medium";
@@ -69,78 +87,99 @@ export default function FatigueStatus() {
 
   const confidencePct = (confidence * 100).toFixed(1);
 
-  return (
-    <div style={{display: 'flex', flexDirection: 'column', height: '100%', gap: '16px'}}>
+  const formatDriverReason = (flag) => {
+      if (!flag) return "NOMINAL PHYSIOLOGICAL STATE";
       
-      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-          <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
-             <Cpu size={16} color="#6366f1" />
-             <span style={{fontSize: '0.75rem', fontWeight: 700, color: '#64748b', letterSpacing: '1px'}}>RF_V3 INFERENCE</span>
+      const map = {
+          "MICROSLEEP": "CRITICAL: OCULAR SUSPENSION (>0.5s)",
+          "HIGH_PERCLOS": "ERROR: PERCLOS THRESHOLD EXCEEDED",
+          "SKIPPED_NO_FACE": "SYSTEM: SUBJECT TRACKING LOST", 
+          "SKIPPED_UNSTABLE": "SYSTEM: SIGNAL QUALITY UNSTABLE",
+          "THERMAL_STRESS": "CRITICAL: HYPERTHERMIC INDICATORS",
+          "HYPOXIA_RISK": "WARNING: SpO2 DESATURATION",
+          "CARDIAC_ANOMALY": "WARNING: BRADYCARDIC EVENT",
+          "BIO_OCULAR_PATTERN": "DETECTED: FATIGUE BIOMETRICS"
+      };
+      
+      return map[flag] || flag.replace(/_/g, " ");
+  };
+
+  return (
+    <div className="fatigue-status-container">
+      
+      <div className="fatigue-header">
+          <div className="fatigue-header-info">
+             <div className="fatigue-model-icon">
+                <Cpu size={16} color={isDarkMode ? '#818cf8' : '#6366f1'} />
+                <span className="fatigue-model-label">RF_V3 INFERENCE</span>
+             </div>
           </div>
-          <div style={{display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.7rem', color: predictedClass === "OFFLINE" ? '#94a3b8' : '#16a34a', fontWeight: 600}}>
-             <span style={{width: 6, height: 6, borderRadius: '50%', background: predictedClass === "OFFLINE" ? '#94a3b8' : '#16a34a', boxShadow: predictedClass === "OFFLINE" ? 'none' : '0 0 4px #16a34a'}}></span>
-             {predictedClass === "OFFLINE" ? "OFFLINE" : "ONLINE"}
+          <div className="fatigue-header-info">
+             <button className="fatigue-reset-button" onClick={handleReset} title="Reset Calibration">
+                <RotateCcw size={14} color={isDarkMode ? '#cbd5e1' : '#64748b'} />
+             </button>
+             <div className="fatigue-status-indicator">
+                <span 
+                  className="fatigue-status-dot" 
+                  style={{
+                    background: predictedClass === "OFFLINE" ? '#94a3b8' : (predictedClass === "CALIBRATING" ? '#3b82f6' : '#16a34a'),
+                    boxShadow: predictedClass === "OFFLINE" ? 'none' : (predictedClass === "CALIBRATING" ? '0 0 4px #3b82f6' : '0 0 4px #16a34a')
+                  }}
+                ></span>
+             </div>
           </div>
       </div>
 
-      <div className={`prediction-box ${color}`} style={{
-          background: color === 'high' ? '#fef2f2' : (color === 'medium' ? '#fffbeb' : '#f0fdf4'),
-          border: `1px solid ${color === 'high' ? '#fecaca' : (color === 'medium' ? '#fde68a' : '#bbf7d0')}`,
-          borderRadius: '12px',
-          padding: '16px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '8px',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
-      }}>
-          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-             <span style={{fontSize: '0.8rem', color: '#64748b', fontWeight: 600}}>PREDICTED CLASS</span>
-             <span style={{fontSize: '2rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-1px', lineHeight: 1}}>
+      <div className={`fatigue-prediction-box ${color}`}>
+          <div className="fatigue-class-header">
+             <span className="fatigue-class-label">PREDICTED CLASS</span>
+             <span className="fatigue-class-value">
                 {predictedClass}
              </span>
           </div>
           
+          <div className="fatigue-driver-section">
+             <span className="fatigue-driver-label">PRIMARY DRIVER</span>
+             <span className="fatigue-driver-reason">
+                {formatDriverReason(ml_flag)}
+             </span>
+          </div>
+          
           <div>
-            <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '4px'}}>
-               <span style={{fontSize: '0.7rem', color: '#64748b'}}>MODEL CONFIDENCE</span>
-               <span style={{fontSize: '0.75rem', fontWeight: 700, color: '#0f172a'}}>{confidencePct}%</span>
+            <div className="fatigue-confidence-header">
+               <span className="fatigue-confidence-label">MODEL CONFIDENCE</span>
+               <span className="fatigue-confidence-value">{isInitializing ? "---" : `${confidencePct}%`}</span>
             </div>
-            <div style={{width: '100%', height: '6px', background: 'rgba(0,0,0,0.05)', borderRadius: '4px', overflow: 'hidden'}}>
-               <div style={{
-                   width: `${confidencePct}%`, 
-                   height: '100%', 
-                   background: color === 'high' ? '#ef4444' : (color === 'medium' ? '#f59e0b' : '#22c55e'),
-                   borderRadius: '4px',
-                   transition: 'width 0.5s ease'
-               }}></div>
+            <div className="fatigue-confidence-bar">
+               <div 
+                 className={`fatigue-confidence-fill ${color} ${isInitializing ? 'pulse' : ''}`}
+                 style={{width: isInitializing ? '100%' : `${confidencePct}%`}}
+               ></div>
             </div>
           </div>
       </div>
 
-      <div style={{flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column'}}>
-        <div style={{fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', marginBottom: '8px', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '6px'}}>
+      <div className="fatigue-features-section">
+        <div className="fatigue-features-label">
            <Activity size={12} /> LIVE FEATURE WEIGHTS
         </div>
         
         <div className="risk-list-container">
           <ul className="risk-factor-list">
              {sortedFeatures.map((feat) => (
-                <li key={feat.id} className="risk-factor-item" style={{display: 'block'}}>
-                   <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '4px'}}>
-                       <span style={{fontSize: '0.75rem', fontWeight: 600, color: '#475569'}}>{feat.label}</span>
-                       <span style={{fontSize: '0.7rem', fontFamily: 'monospace', color: '#0f172a'}}>{feat.raw}</span>
+                <li key={feat.id} className="risk-factor-item">
+                   <div className="risk-factor-label">
+                       <span className="risk-factor-name">{feat.label}</span>
+                       <span className="risk-factor-raw">{feat.raw}</span>
                    </div>
-                   <div style={{width: '100%', display: 'flex', alignItems: 'center', gap: '8px'}}>
-                       <div style={{flex: 1, height: '4px', background: '#f1f5f9', borderRadius: '2px'}}>
-                          <div style={{
-                             width: `${Math.min(feat.value * 100, 100)}%`, 
-                             height: '100%', 
-                             background: feat.value > 0.5 ? '#6366f1' : '#94a3b8', 
-                             borderRadius: '2px',
-                             transition: 'width 0.3s'
-                          }}></div>
+                   <div className="risk-factor-bar-container">
+                       <div className="risk-factor-bar">
+                          <div 
+                            className={`risk-factor-bar-fill ${feat.value > 0.5 ? 'high' : 'low'}`}
+                            style={{width: `${Math.min(feat.value * 100, 100)}%`}}
+                          ></div>
                        </div>
-                       <span style={{fontSize: '0.65rem', fontFamily: 'monospace', color: '#cbd5e1', width: '30px', textAlign: 'right'}}>
+                       <span className="risk-factor-value">
                           {feat.value.toFixed(2)}
                        </span>
                    </div>

@@ -10,6 +10,7 @@ import {
 
 // Context
 import { FatigueProvider } from "./context/FatigueContext";
+import { ThemeProvider } from "./context/ThemeContext";
 
 // Components
 import BodyTemperatureChart from "./components/BodyTemperatureChart";
@@ -19,6 +20,7 @@ import HeadPositionChart from "./components/HeadPositionChart";
 import CameraModule from "./components/CameraModule";
 import FatigueStatus from "./components/FatigueStatus";
 import DrowsinessIndicators from "./components/DrowsinessIndicators";
+import ThemeToggle from "./components/ThemeToggle";
 import { useFatigueData } from "./hooks/useFatigueData";
 
 // Wrapper Component to access Context for Theme
@@ -32,9 +34,6 @@ const DashboardContent = () => {
 
   return (
     <div className={`dashboard-container ${themeClass}`}>
-      {/* Floating Indicator */}
-      <DrowsinessIndicators />
-
       {/* Top Header (Fixed Height) */}
       <header className="top-header">
         <div className="brand">
@@ -45,10 +44,18 @@ const DashboardContent = () => {
         </div>
         
         <div className="header-actions">
+           {/* Moved Indicator Here as requested */}
+           <div style={{marginRight: '12px'}}>
+              <DrowsinessIndicators />
+           </div>
+
           <div className="status-badge">
             <span className="live-dot"></span>
             System Active
           </div>
+          
+          <ThemeToggle />
+          
           <div className="user-profile" style={{width: 32, height: 32, borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
             <User size={16} color="#64748b" />
           </div>
@@ -141,9 +148,11 @@ function App() {
   if (!mounted) return null;
 
   return (
-      <FatigueProvider>
-          <DashboardContent />
-      </FatigueProvider>
+      <ThemeProvider>
+        <FatigueProvider>
+            <DashboardContent />
+        </FatigueProvider>
+      </ThemeProvider>
   );
 }
 

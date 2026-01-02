@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { CheckCircle, AlertTriangle, XCircle } from "lucide-react";
+import { CheckCircle, AlertTriangle, XCircle, Volume2, VolumeX } from "lucide-react";
 import { useFatigueData } from "../hooks/useFatigueData";
 import "./Css/DrowsinessIndicators.css";
 
@@ -32,6 +32,12 @@ export default function FatigueIndicator() {
   }, []);
 
   const evaluateFatigue = () => {
+    // 1. Check Initialization (Direct)
+    if (data.system_status === "Initializing") return "LOW";
+
+    // 2. Check Initialization (Implicit via Prediction Status)
+    if (data.ml_fatigue_status && data.ml_fatigue_status.startsWith("Initializing")) return "LOW";
+
     if (data.ml_fatigue_status && data.ml_fatigue_status !== 'Unknown' && data.ml_fatigue_status !== 'Error') {
       const ml = data.ml_fatigue_status;
       if (ml === "Fatigued") return "HIGH";
@@ -74,47 +80,78 @@ export default function FatigueIndicator() {
     }
   };
 
+  const [isMuted, setIsMuted] = React.useState(false);
+
   useEffect(() => {
     const prevLevel = prevLevelRef.current;
+    
+    // Safety check: Audio ref might be null if component unmounts
     const audio = audioRef.current;
+    if (!audio) return;
 
-    console.log(`[Fatigue Logic] Level: ${level} | Prev: ${prevLevel}`); // DEBUG
-
-    if (level === "HIGH" && prevLevel !== "HIGH" && audio) {
-      console.log("🚨 TRIGGERING ALARM SOUND!");
-      audio.currentTime = 0;
-      audio.play().catch((err) => console.error("Audio play BLOCKED by Browser:", err));
+    if (level === "HIGH" && prevLevel !== "HIGH") {
+      if (!isMuted) {
+          console.log("🚨 TRIGGERING ALARM SOUND!");
+          audio.currentTime = 0;
+          audio.play().catch((err) => console.error("Audio play BLOCKED:", err));
+      }
     }
 
-    if ((level === "LOW" || level === "MEDIUM") && prevLevel === "HIGH" && audio) {
-        console.log("✅ SILENCING ALARM");
-      audio.pause();
-      audio.currentTime = 0;
+    // Force Stop if not HIGH or Muted
+    if ((level !== "HIGH" || isMuted) && !audio.paused) {
+         audio.pause();
+         audio.currentTime = 0;
     }
 
     prevLevelRef.current = level;
-  }, [level]);
+  }, [level, isMuted]);
 
   const getConfig = (lvl) => {
     switch (lvl) {
       case "LOW":
-        return { label: "Alert", icon: <CheckCircle color="#16a34a" size={24} /> };
+        return { label: "NOMINAL", icon: <CheckCircle color="#16a34a" size={24} /> }; // Industry Term
       case "MEDIUM":
-        return { label: "Drowsy", icon: <AlertTriangle color="#ca8a04" size={24} /> };
+        return { label: "CAUTION", icon: <AlertTriangle color="#ca8a04" size={24} /> };
       case "HIGH":
-        return { label: "Fatigued", icon: <XCircle color="#dc2626" size={24} /> };
+        return { label: "CRITICAL", icon: <XCircle color="#dc2626" size={24} /> };
       default:
-        return { label: "Unknown", icon: <AlertTriangle color="#6b7280" size={24} /> };
+        return { label: "UNKNOWN", icon: <AlertTriangle color="#6b7280" size={24} /> };
     }
   };
 
   const { label, icon } = getConfig(level);
 
   return (
-    <div className="fatigue-indicator-container" onClick={handleUserInteraction} style={{cursor: 'pointer'}} title="Click to enable sound">
-      <div className={`fatigue-indicator ${level.toLowerCase()}`}>
+    <div className="fatigue-indicator-container">
+      <div 
+        className={`fatigue-indicator ${level.toLowerCase()}`} 
+        onClick={handleUserInteraction}
+        title="Status Indicator"
+      >
         <div className="indicator-icon">{icon}</div>
-        <span className="indicator-label">{label}</span>
+        <span className="indicator-label" style={{marginRight: '8px'}}>{label}</span>
+        
+        <div 
+            onClick={(e) => { 
+                e.stopPropagation(); 
+                setIsMuted(!isMuted); 
+                // Don't call handleUserInteraction here to avoid double-trigger logic if needed, 
+                // but actually we want to ensure Audio Context is unlocked, so it's fine.
+                handleUserInteraction();
+            }}
+            title={isMuted ? "Unmute Alarm" : "Mute Alarm"}
+            style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: '4px',
+                borderRadius: '4px',
+                background: 'rgba(255,255,255,0.2)',
+                cursor: 'pointer',
+                transition: 'background 0.2s'
+            }}
+            className="mute-btn"
+        >
+            {isMuted ? <VolumeX size={14} color="white" /> : <Volume2 size={14} color="white" />}
+        </div>
       </div>
     </div>
   );

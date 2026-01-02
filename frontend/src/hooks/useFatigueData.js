@@ -35,6 +35,8 @@ export const useFatigueData = () => {
         // Extract Detailed ML Data
         ml_fatigue_status: mlData.status || "Unknown",
         ml_confidence: mlData.confidence || 0,
+        ml_flag: mlData.flag,
+        system_status: fullData.status, // "Active" / "Initializing"
         timestamp: fullData.server_time || Date.now(),
     };
 };

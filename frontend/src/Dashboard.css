@@ -4,63 +4,65 @@
   flex-direction: column;
   height: 100vh;
   width: 100vw;
-  background: radial-gradient(circle at 10% 10%, #f8fafc 0%, #f1f5f9 100%);
+  background-color: var(--bg-app);
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.05) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(59, 130, 246, 0.05) 0px, transparent 50%);
   overflow: hidden;
-  transition: background 0.5s;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  transition: background-color 0.3s ease;
 }
 
+[data-theme="dark"] .dashboard-container {
+  background-color: var(--bg-app);
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.08) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(59, 130, 246, 0.08) 0px, transparent 50%);
+}
 
 .theme-safe {
-  --theme-border: var(--border-light);
+  --theme-border: transparent;
   --theme-glow: none;
-  --theme-bg-tint: transparent;
 }
 .theme-warning {
-  --theme-border: #fcd34d;
-  --theme-glow: 0 0 15px rgba(251, 191, 36, 0.3);
-  --theme-bg-tint: linear-gradient(to bottom, rgba(255, 251, 235, 0.5), transparent);
+  --theme-border: #fbbf24;
+  --theme-glow: 0 0 0 1px rgba(251, 191, 36, 0.2);
 }
 .theme-danger {
-  --theme-border: #fda4af;
-  --theme-glow: 0 0 20px rgba(244, 63, 94, 0.4);
-  --theme-bg-tint: linear-gradient(to bottom, rgba(254, 242, 242, 0.6), transparent);
-  animation: bg-pulse-danger 2s infinite;
+  --theme-border: #f87171;
+  --theme-glow: 0 0 0 2px rgba(248, 113, 113, 0.2);
+  animation: none; /* Removed heavy pulse */
 }
-
-@keyframes bg-pulse-danger {
-  0% { box-shadow: inset 0 0 0 0 rgba(244, 63, 94, 0); }
-  50% { box-shadow: inset 0 0 50px 0 rgba(244, 63, 94, 0.2); }
-  100% { box-shadow: inset 0 0 0 0 rgba(244, 63, 94, 0); }
-}
-
 
 .top-header {
-  flex: 0 0 60px;
-  background: var(--bg-header);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  flex: 0 0 64px;
+  background: var(--bg-surface);
   border-bottom: 1px solid var(--border-light);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
+  padding: 0 32px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
   z-index: 100;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
-.brand { display: flex; align-items: center; gap: 12px; }
+.brand { display: flex; align-items: center; gap: 14px; }
 .brand-logo {
-  width: 32px; height: 32px;
-  background: linear-gradient(135deg, var(--primary), var(--accent));
-  border-radius: 8px;
+  width: 36px; height: 36px;
+  background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
+  border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
-  color: white;
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+  color: #ffffff;
+  box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
+  transition: all 0.3s ease;
 }
 .brand-name {
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   font-weight: 700;
   color: var(--text-main);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
+  transition: color 0.3s ease;
 }
 
 .header-actions { display: flex; align-items: center; gap: 16px; }
@@ -69,13 +71,14 @@
 .status-badge {
   display: inline-flex; align-items: center; gap: 8px;
   padding: 6px 14px;
-  background: #ffffff;
+  background: var(--bg-surface);
   border: 1px solid var(--border-light);
   border-radius: 20px;
   font-size: 0.8rem;
   font-weight: 500;
   color: var(--text-muted);
   box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+  transition: all 0.3s ease;
 }
 .live-dot {
   width: 8px; height: 8px;
@@ -130,14 +133,14 @@
   overflow: hidden; /* Fix: No scrolling */
 }
 
-/* === CARD DESIGN (The "Real" Look) === */
+/* === CARD DESIGN (Modern) === */
 .card {
   background: var(--bg-surface);
-  border: 1px solid var(--theme-border, var(--border-light)); /* Dynamic Border */
-  border-radius: var(--radius-panel);
-  box-shadow: var(--shadow-card), var(--theme-glow, none); /* Dynamic Glow */
-  transition: border-color 0.5s, box-shadow 0.5s;
-  padding: 20px;
+  border: 1px solid var(--border-light);
+  border-radius: 16px;
+  box-shadow: var(--shadow-card);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.3s ease, border-color 0.3s ease;
+  padding: 24px;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -145,7 +148,7 @@
 }
 .card:hover {
   border-color: var(--border-hover);
-  box-shadow: 0 4px 20px rgba(0,0,0,0.06); /* Lift effect */
+  box-shadow: var(--shadow-float);
   transform: translateY(-1px);
 }
 
@@ -182,9 +185,10 @@
   padding: 0;
   border: none;
   background: #000;
-  border-radius: var(--radius-panel);
+  border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  position: relative;
 }
 
 .camera-feed-video {
@@ -196,9 +200,10 @@
 .camera-overlay {
   position: absolute; bottom: 0; left: 0; right: 0;
   padding: 16px;
-  background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
-  color: white;
+  background: linear-gradient(to top, rgba(0,0,0,0.95), transparent);
+  color: #f1f5f9;
   display: flex; justify-content: space-between; align-items: flex-end;
+  transition: all 0.3s ease;
 }
 
 /* === FATIGUE STATUS (Premium) === */
@@ -206,8 +211,9 @@
   flex: 1; /* Fix: Fill remaining space dynamically */
   height: auto; 
   min-height: 0; /* Prevent overflow */
-  background: #fff;
+  background: var(--bg-surface);
   border-top: 4px solid var(--theme-border, var(--primary));
+  transition: background-color 0.3s ease;
 }
 
 .fatigue-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
@@ -250,7 +256,7 @@
   transition: all 0.2s;
 }
 .risk-factor-item:hover {
-  background: #fff;
+  background: var(--bg-surface);
   border-color: var(--border-light);
   box-shadow: 0 2px 4px rgba(0,0,0,0.02);
 }
@@ -260,7 +266,7 @@
 
 /* Scrollbar Polish */
 ::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 3px; transition: background 0.3s ease; }
 ::-webkit-scrollbar-track { background: transparent; }
 
 /* === RESPONSIVE === */

@@ -3,13 +3,17 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { RoundedBox, Environment, ContactShadows } from "@react-three/drei";
 import { useHeadPosition } from "../hooks/useHeadPosition";
 import { useFatigueData } from "../hooks/useFatigueData";
+import "./Css/HeadPositionChart.css";
 
-function HeadModel({ angles, fatigueStatus }) {
+function HeadModel({ angles, fatigueStatus, source }) {
   const group = useRef();
   
   useFrame(() => {
     if (group.current) {
-        const radX = (angles.x * Math.PI) / 180;
+        // Reverse Up/Down (Pitch) for Sensor as requested
+        const finalPitch = source === "Sensor" ? -angles.x : angles.x;
+
+        const radX = (finalPitch * Math.PI) / 180;
         const radY = (-angles.y * Math.PI) / 180;
         const radZ = (-angles.z * Math.PI) / 180;
         group.current.rotation.set(radX, radY, radZ, 'YXZ');
@@ -63,17 +67,26 @@ export default function HeadPositionChart() {
   
   const showCalibration = source === "Vision (Fallback)" && calibrated === false;
   const isInitializing = source === "None" || source === "Unknown";
-  const noFaceFound = ml_fatigue_status === "Unknown" && source === "Vision (Fallback)" && position === "Unknown";
+  const noFaceFound = ml_fatigue_status === "Unknown" && source === "Vision (Fallback)" && position === "Unknown" && calibrated === true;
+
+  // Track if sound has played for this calibration cycle
+  const hasPlayedCalibrationSound = React.useRef(false);
 
   React.useEffect(() => {
     if (source === "Vision (Fallback)" && calibrated === true) {
-        try {
-            const audio = new Audio("/sounds/correct-356013.mp3");
-            audio.volume = 0.5;
-            audio.play().catch(e => console.error("Audio playback error:", e));
-        } catch (e) {
-            console.error("Audio initialization failed", e);
+        if (!hasPlayedCalibrationSound.current) {
+            try {
+                const audio = new Audio("/sounds/correct-356013.mp3");
+                audio.volume = 0.5;
+                audio.play().catch(e => console.error("Audio playback error:", e));
+                hasPlayedCalibrationSound.current = true; // Mark as played
+            } catch (e) {
+                console.error("Audio initialization failed", e);
+            }
         }
+    } else if (!calibrated) {
+        // Reset whenever calibration is lost or reset
+        hasPlayedCalibrationSound.current = false;
     }
   }, [calibrated, source]);
   
@@ -82,66 +95,54 @@ export default function HeadPositionChart() {
   const statusText = isSafe ? "SAFE" : "DISTRACTED";
 
   return (
-    <div style={{ width: "100%", height: "100%", position: "relative", borderRadius: "12px", overflow: "hidden", background: "linear-gradient(to bottom, #f8fafc, #e2e8f0)" }}>
+    <div className="head-position-container">
         
-        <div style={{ position: "absolute", top: 12, left: 16, zIndex: 10 }}>
-            <div style={{fontSize: "1.5rem", fontWeight: 800, color: "#334155", lineHeight: 1}}>{position.toUpperCase()}</div>
-            <div style={{fontSize: "0.7rem", color: "#64748b", fontWeight: 600}}>HEAD POSE</div>
+        <div className="head-position-header">
+            <div className="head-position-title">{position.toUpperCase()}</div>
+            <div className="head-position-label">HEAD POSE</div>
         </div>
 
-        <div style={{ position: "absolute", top: 8, right: 8, display: "flex", gap: "6px", alignItems: "center", zIndex: 10 }}>
+        <div className="head-position-controls">
             {/* RESET BUTTON for Cloud Calibration */}
             <button 
+                className="head-reset-button"
                 onClick={async (e) => {
                     e.stopPropagation();
                     const { resetCalibration } = await import("../api");
                     await resetCalibration();
                 }}
                 title="Reset Calibration"
-                style={{
-                    background: "rgba(255,255,255,0.7)", 
-                    border: "1px solid #cbd5e1", 
-                    borderRadius: "4px", 
-                    padding: "2px 6px", 
-                    cursor: "pointer",
-                    fontSize: "0.6rem", 
-                    fontWeight: 700,
-                    color: "#3b82f6",
-                    transition: "all 0.2s"
-                }}
-                onMouseEnter={(e) => e.target.style.background = "#fff"}
-                onMouseLeave={(e) => e.target.style.background = "rgba(255,255,255,0.7)"}
             >
                 ↻
             </button> 
 
-            <div style={{ padding: "2px 6px", borderRadius: "4px", background: "rgba(255,255,255,0.8)", border: "1px solid #cbd5e1", color: "#64748b", fontSize: "0.6rem", fontWeight: 700 }}>
+            <div className="head-source-badge">
                 {source === "Vision (Fallback)" ? "VISION" : (source === "Sensor" ? "SENSOR" : "NONE")}
             </div>
         </div>
 
         {isInitializing && (
-            <div style={{ position: 'absolute', inset: 0, zIndex: 55, background: 'rgba(241, 245, 249, 0.95)', backdropFilter: 'blur(8px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
-                <div className="animate-spin" style={{ width: 40, height: 40, border: '4px solid #e2e8f0', borderTopColor: '#6366f1', borderRadius: '50%' }}></div>
-                <div style={{ textAlign: 'center' }}>
-                    <div style={{fontSize: '0.9rem', fontWeight: 800, color: '#1e293b', letterSpacing: '1px'}}>INITIALIZING</div>
-                    <div style={{fontSize: '0.65rem', fontWeight: 600, color: '#94a3b8'}}>WAITING FOR SENSORS...</div>
+            <div className="head-initializing-overlay">
+                <div className="head-spinner"></div>
+                <div className="head-init-text">
+                    <div className="head-init-title">INITIALIZING</div>
+                    <div className="head-init-subtitle">WAITING FOR SENSORS...</div>
                 </div>
             </div>
         )}
 
         {showCalibration && !isInitializing && (
-            <div style={{ position: 'absolute', inset: 0, zIndex: 50, background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(4px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                <div className="animate-pulse" style={{ width: 32, height: 32, border: '4px solid #e2e8f0', borderTopColor: '#3b82f6', borderRadius: '50%', marginBottom: 12 }}></div>
-                <div style={{fontSize: '1rem', fontWeight: 800, color: '#0f172a'}}>CALIBRATING</div>
-                <div style={{fontSize: '0.75rem', fontWeight: 500, color: '#64748b'}}>Look straight at the camera...</div>
+            <div className="head-calibration-overlay">
+                <div className="head-calibration-spinner"></div>
+                <div className="head-calibration-text">CALIBRATING</div>
+                <div className="head-calibration-subtitle">Look straight at the camera...</div>
             </div>
         )}
 
         {noFaceFound && !isInitializing && !showCalibration && (
-            <div style={{ position: 'absolute', inset: 0, zIndex: 45, background: 'rgba(248, 250, 252, 0.8)', backdropFilter: 'blur(4px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '2px dashed #cbd5e1', margin: '12px', borderRadius: '12px' }}>
-                <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#64748b', letterSpacing: '0.5px' }}>NO FACE DETECTED</div>
-                <div style={{ fontSize: '0.65rem', fontWeight: 500, color: '#94a3b8', marginTop: '4px' }}>ENSURE FACE IS VISIBLE</div>
+            <div className="head-no-face-overlay">
+                <div className="head-no-face-text">NO FACE DETECTED</div>
+                <div className="head-no-face-subtitle">ENSURE FACE IS VISIBLE</div>
             </div>
         )}
 
@@ -153,6 +154,7 @@ export default function HeadPositionChart() {
             <HeadModel 
                 angles={{ x: angle_x, y: angle_y, z: angle_z }} 
                 fatigueStatus={ml_fatigue_status} 
+                source={source}
             />
             
             <ContactShadows position={[0, -1.4, 0]} opacity={0.4} scale={10} blur={2.5} far={4} />

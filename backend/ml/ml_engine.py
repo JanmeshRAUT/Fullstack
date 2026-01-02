@@ -201,6 +201,10 @@ class MLEngine:
                     "flag": "HIGH_PERCLOS"
                 }
 
+
+            # --- 1.5 SENSOR CONDITION CHECK (Initialize) ---
+            sensor_condition_flag = None
+
             # --- 2. FEATURE ENGINEERING ---
             raw_sample = [
                 current_ear,
@@ -235,6 +239,29 @@ class MLEngine:
             # --- 3. PROBABILISTIC INFERENCE ---
             # Get raw probabilities [Alert%, Drowsy%, Fatigued%]
             raw_probs = self.model.predict_proba(X_input)[0]
+
+            # --- 3.5 LOGICAL SENSOR OVERRIDES (Soft Integration) ---
+            # Instead of a hard return, we bias the probabilities so the 
+            # EMA Smoothing and State Machine handle it naturally (No Flicker).
+            
+            # THERMAL STRESS (> 37.8°C)
+            if curr_temp >= 37.8:
+                # Strong push towards Drowsy/Fatigued
+                # We blend the model's prediction with a strong override vector
+                override_vec = np.array([0.05, 0.85, 0.10]) # Mostly Drowsy
+                if curr_temp > 39.0:
+                    override_vec = np.array([0.0, 0.1, 0.9]) # Mostly Fatigued
+                
+                # Apply Override (90% weight to sensor, 10% to face)
+                raw_probs = (0.1 * raw_probs) + (0.9 * override_vec)
+                sensor_condition_flag = "THERMAL_STRESS"
+
+            # BRADYCARDIA (HR < 50)
+            elif 0 < curr_hr < 50:
+                # Drowsy Bias
+                override_vec = np.array([0.1, 0.8, 0.1])
+                raw_probs = (0.2 * raw_probs) + (0.8 * override_vec)
+                sensor_condition_flag = "CARDIAC_ANOMALY"
             
             # --- 4. ADVANCED SMOOTHING (EMA) ---
             if self.ema_probs is None:
@@ -277,10 +304,15 @@ class MLEngine:
             
             final_label = self.labels.get(self.current_state, "Unknown")
             
+            # Ensure we have a flag if the model detects fatigue but no sensor override exists
+            if sensor_condition_flag is None and self.current_state > 0:
+                sensor_condition_flag = "BIO_OCULAR_PATTERN"
+
             return {
                 "status": final_label,
                 "confidence": round(float(confidence), 2),
-                "raw_probs": [round(p, 2) for p in self.ema_probs]
+                "raw_probs": [round(p, 2) for p in self.ema_probs],
+                "flag": sensor_condition_flag
             }
             
         except Exception as e:
