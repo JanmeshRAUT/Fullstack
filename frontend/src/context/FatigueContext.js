@@ -34,7 +34,9 @@ export const FatigueProvider = ({ children }) => {
                 const json = await response.json();
                 
                 if (isMounted) {
-                    setFullData(json);
+                    // Inject System Status
+                    const richData = { ...json, status: "Active" };
+                    setFullData(richData);
                     
                     // --- UPDATE HISTORIES ---
                     // 1. Heart Rate History
@@ -63,6 +65,11 @@ export const FatigueProvider = ({ children }) => {
                 }
             } catch (error) {
                 console.error("[FatigueContext] Fetch Error:", error);
+                if (isMounted) {
+                    // Retain old data but mark as Offline if needed
+                    // Or set a specific offline state
+                     setFullData(prev => ({ ...prev, status: "Offline" }));
+                }
             }
         };
 
