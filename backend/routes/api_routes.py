@@ -206,6 +206,10 @@ def reset_calibration():
             with cv_angles_lock:
                  cv_head_angles["is_calibrated"] = False
                  
+            # Reset Eye Calibration
+            from cv.perclos import reset_eye_calibration as reset_eyes
+            reset_eyes()
+                 
         return jsonify({"message": "Calibration reset successfully", "status": "OK"}), 200
     except Exception as e:
          return jsonify({"error": str(e)}), 500

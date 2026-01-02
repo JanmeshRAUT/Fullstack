@@ -59,6 +59,19 @@ def mouth_aspect_ratio(mouth):
     h = math.dist(mouth[2], mouth[3])
     return v / h if h else 0
 
+# --- Calibration Global State ---
+PERSONAL_EAR_THRESH = 0.30 # Default (fallback)
+calibration_buffer = deque(maxlen=30)
+is_calibrating_eyes = True
+
+def reset_eye_calibration():
+    global is_calibrating_eyes, calibration_buffer, PERSONAL_EAR_THRESH
+    print("[CV] 🔄 Starting Eye Calibration...")
+    is_calibrating_eyes = True
+    calibration_buffer.clear()
+    PERSONAL_EAR_THRESH = 0.30 # Reset to default
+    return True
+
 def process_face_mesh(frame):
     """
     Processes a frame using MediaPipe FaceMesh to update PERCLOS, Yawn, and Head Pose.
@@ -105,9 +118,27 @@ def process_face_mesh(frame):
         right = [(lm.landmark[i].x * w, lm.landmark[i].y * h) for i in RIGHT_EYE]
         ear = (eye_aspect_ratio(left) + eye_aspect_ratio(right)) / 2
         
+        # --- CALIBRATION LOGIC ---
+        global is_calibrating_eyes, PERSONAL_EAR_THRESH
+        
+        if is_calibrating_eyes:
+            if is_stable:
+                calibration_buffer.append(ear)
+            
+            if len(calibration_buffer) >= 30:
+                # Calculate new threshold (80% of median open eye)
+                avg_ear = np.median(calibration_buffer)
+                PERSONAL_EAR_THRESH = max(0.20, avg_ear * 0.80) 
+                is_calibrating_eyes = False
+                print(f"[CV] ✅ Calibration Complete. Personal EAR Thresh: {PERSONAL_EAR_THRESH:.3f} (Avg: {avg_ear:.3f})")
+            
+            # While calibrating, assume Eyes Open (safe)
+            perclos_data.update({"status": "Calibrating", "ear": round(ear, 3)})
+            return perclos_data
+
         # LOGIC: If Unstable, Force Eyes 'Open' to prevent False Positive Fatigue
         if is_stable:
-             eyes_closed = 1 if ear < EYE_AR_THRESH else 0
+             eyes_closed = 1 if ear < PERSONAL_EAR_THRESH else 0
         else:
              eyes_closed = 0 # Force Open if shaking
              

@@ -139,6 +139,17 @@ export default function FatigueStatus() {
           </div>
           
           <div className="fatigue-driver-section">
+             {/* Calibration Overlay */}
+             {(predictedClass === "CALIBRATING" || data?.status === "Calibrating") && (
+                <div className="fatigue-calibration-overlay">
+                    <div className="calibration-spinner"></div>
+                    <div className="calibration-text">
+                        <span className="calib-title">CALIBRATING EYES</span>
+                        <span className="calib-subtitle">Look at the camera naturally...</span>
+                    </div>
+                </div>
+             )}
+
              <span className="fatigue-driver-label">PRIMARY DRIVER</span>
              <span className="fatigue-driver-reason">
                 {formatDriverReason(ml_flag)}
