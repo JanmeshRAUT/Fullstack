@@ -335,6 +335,11 @@
   /* Status Card */
   .fatigue-score-large { font-size: 3rem; }
   
-  /* Fix overflow issues */
-  body { overflow-x: hidden; }
+  /* ALLOW SCROLLING ON MOBILE */
+  html, body, #root, .dashboard-container {
+    height: auto !important;
+    min-height: 100vh;
+    overflow-y: auto !important;
+    overflow-x: hidden;
+  }
 }
