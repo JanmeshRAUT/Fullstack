@@ -113,6 +113,28 @@ export default function FatigueStatus() {
                 <Cpu size={16} color={isDarkMode ? '#818cf8' : '#6366f1'} />
                 <span className="fatigue-model-label">RF_V3 INFERENCE</span>
              </div>
+             {/* Health Indicator */}
+             <div style={{
+                 marginLeft: '12px',
+                 fontSize: '0.65rem',
+                 padding: '2px 6px',
+                 borderRadius: '4px',
+                 background: system_status === 'Active' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                 color: system_status === 'Active' ? '#22c55e' : '#ef4444',
+                 display: 'flex',
+                 alignItems: 'center',
+                 gap: '4px',
+                 fontWeight: 600
+             }}>
+                <div style={{
+                    width: '6px', 
+                    height: '6px', 
+                    borderRadius: '50%', 
+                    background: system_status === 'Active' ? '#22c55e' : '#ef4444',
+                    boxShadow: system_status === 'Active' ? '0 0 4px #22c55e' : 'none'
+                }}></div>
+                {system_status === 'Active' ? 'ONLINE' : 'DISCONNECTED'}
+             </div>
           </div>
           <div className="fatigue-header-info">
              <button className="fatigue-reset-button" onClick={handleReset} title="Reset Calibration">

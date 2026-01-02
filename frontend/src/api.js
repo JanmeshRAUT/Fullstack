@@ -54,3 +54,19 @@ export const resetCalibration = async () => {
         return false;
     }
 };
+
+export const checkBackendHealth = async () => {
+    try {
+        const start = Date.now();
+        const res = await axios.get(`${API_BASE}/health`);
+        const latency = Date.now() - start;
+        return { 
+            status: "Online", 
+            latency, 
+            version: res.data.service 
+        };
+    } catch (err) {
+        console.error("Health check failed:", err);
+        return { status: "Offline", latency: 0 };
+    }
+};
