@@ -91,14 +91,14 @@ export default function FatigueStatus() {
       if (!flag) return "NOMINAL PHYSIOLOGICAL STATE";
       
       const map = {
-          "MICROSLEEP": "CRITICAL: OCULAR SUSPENSION (>0.5s)",
-          "HIGH_PERCLOS": "ERROR: PERCLOS THRESHOLD EXCEEDED",
-          "SKIPPED_NO_FACE": "SYSTEM: SUBJECT TRACKING LOST", 
-          "SKIPPED_UNSTABLE": "SYSTEM: SIGNAL QUALITY UNSTABLE",
-          "THERMAL_STRESS": "CRITICAL: HYPERTHERMIC INDICATORS",
-          "HYPOXIA_RISK": "WARNING: SpO2 DESATURATION",
-          "CARDIAC_ANOMALY": "WARNING: BRADYCARDIC EVENT",
-          "BIO_OCULAR_PATTERN": "DETECTED: FATIGUE BIOMETRICS"
+          "MICROSLEEP": "CRITICAL MICROSLEEP EVENT",
+          "HIGH_PERCLOS": "EXCESSIVE OCULAR CLOSURE",
+          "SKIPPED_NO_FACE": "SUBJECT NOT VISIBLE", 
+          "SKIPPED_UNSTABLE": "SIGNAL INSTABILITY",
+          "THERMAL_STRESS": "THERMAL STRESS INDICATED",
+          "HYPOXIA_RISK": "HYPOXIA RISK WARNING",
+          "CARDIAC_ANOMALY": "CARDIAC RHYTHM ANOMALY",
+          "BIO_OCULAR_PATTERN": "BIO-OCULAR FATIGUE PATTERN"
       };
       
       return map[flag] || flag.replace(/_/g, " ");
@@ -112,28 +112,6 @@ export default function FatigueStatus() {
              <div className="fatigue-model-icon">
                 <Cpu size={16} color={isDarkMode ? '#818cf8' : '#6366f1'} />
                 <span className="fatigue-model-label">RF_V3 INFERENCE</span>
-             </div>
-             {/* Health Indicator */}
-             <div style={{
-                 marginLeft: '12px',
-                 fontSize: '0.65rem',
-                 padding: '2px 6px',
-                 borderRadius: '4px',
-                 background: system_status === 'Active' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)',
-                 color: system_status === 'Active' ? '#22c55e' : '#ef4444',
-                 display: 'flex',
-                 alignItems: 'center',
-                 gap: '4px',
-                 fontWeight: 600
-             }}>
-                <div style={{
-                    width: '6px', 
-                    height: '6px', 
-                    borderRadius: '50%', 
-                    background: system_status === 'Active' ? '#22c55e' : '#ef4444',
-                    boxShadow: system_status === 'Active' ? '0 0 4px #22c55e' : 'none'
-                }}></div>
-                {system_status === 'Active' ? 'ONLINE' : 'DISCONNECTED'}
              </div>
           </div>
           <div className="fatigue-header-info">
@@ -161,17 +139,6 @@ export default function FatigueStatus() {
           </div>
           
           <div className="fatigue-driver-section">
-             {/* Calibration Overlay */}
-             {(predictedClass === "CALIBRATING" || data?.status === "Calibrating") && (
-                <div className="fatigue-calibration-overlay">
-                    <div className="calibration-spinner"></div>
-                    <div className="calibration-text">
-                        <span className="calib-title">CALIBRATING EYES</span>
-                        <span className="calib-subtitle">Look at the camera naturally...</span>
-                    </div>
-                </div>
-             )}
-
              <span className="fatigue-driver-label">PRIMARY DRIVER</span>
              <span className="fatigue-driver-reason">
                 {formatDriverReason(ml_flag)}

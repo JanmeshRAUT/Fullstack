@@ -342,4 +342,26 @@
     overflow-y: auto !important;
     overflow-x: hidden;
   }
+  
+  /* HIDE LABELS IN HEADER FOR MOBILE */
+  .indicator-label { display: none !important; }
+  .brand-name { font-size: 0.95rem; }
+  
+  /* COMPACT HEADER */
+  .top-header {
+      padding: 0 12px;
+      height: 56px;
+  }
+  
+  /* BETTER CARDS */
+  .card {
+     padding: 16px;
+     border-radius: 12px;
+     box-shadow: 0 2px 8px rgba(0,0,0,0.05); /* Softer shadow */
+  }
+  
+  /* TALLER CHARTS FOR TOUCH */
+  .chart-body-fill {
+      height: 240px; /* Increased from 200px for better visibility */
+  }
 }

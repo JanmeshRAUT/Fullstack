@@ -1,10 +1,21 @@
+"""
+Serial communication module for reading sensor data from Arduino.
+Handles connection, data parsing, and thread-safe state management.
+"""
+import logging
 import serial
 import serial.tools.list_ports
 import threading
 import time
 import math
 import traceback
+import random
 from collections import deque
+
+from config import get_config
+
+logger = logging.getLogger(__name__)
+config = get_config()
 
 # --- Global State ---
 sensor_lock = threading.Lock()
@@ -17,7 +28,7 @@ latest_sensor_data = {
     "timestamp": None
 }
 
-sensor_data_history = deque(maxlen=50)
+sensor_data_history = deque(maxlen=config.MAX_HISTORY)
 
 head_position_data = {
     "position": "Center",
@@ -26,7 +37,23 @@ head_position_data = {
     "timestamp": int(time.time())
 }
 
+def generate_mock_sensor_data():
+    """Generate realistic mock sensor data for testing (when Arduino unavailable)"""
+    return {
+        "temperature": round(36.5 + random.uniform(-0.5, 0.5), 1),
+        "ax": round(random.uniform(-5, 5), 2),
+        "ay": round(random.uniform(-5, 5), 2),
+        "az": round(random.uniform(8, 10), 2),
+        "gx": round(random.uniform(-2, 2), 2),
+        "gy": round(random.uniform(-2, 2), 2),
+        "gz": round(random.uniform(-2, 2), 2),
+        "hr": random.randint(60, 100),
+        "spo2": round(random.uniform(95, 99.5), 1),
+        "timestamp": int(time.time())
+    }
+
 def parse_raw_sensor_string(raw: str):
+    """Parse comma-separated sensor data string into dictionary"""
     parts = [p.strip() for p in raw.split(',') if p.strip()]
     parsed = {}
     for p in parts:
@@ -44,25 +71,52 @@ def parse_raw_sensor_string(raw: str):
             elif k in ("ax", "ay", "az", "gx", "gy", "gz"):
                 parsed[k] = float(v)
         except ValueError:
+            logger.debug(f"Failed to parse sensor value: {k}={v}")
             continue
     return parsed
 
+
 def find_arduino_port():
-    # FORCE COM6 for now (User confirmed it exists)
-    return "COM6"
+    """Auto-detect Arduino port, with fallback to configured port"""
+    try:
+        ports = [p.device for p in serial.tools.list_ports.comports()]
+        logger.debug(f"Available ports: {ports}")
+        
+        # Try configured port first
+        if config.ARDUINO_PORT in ports:
+            logger.info(f"Using configured port: {config.ARDUINO_PORT}")
+            return config.ARDUINO_PORT
+        
+        # Auto-detect: prefer CH340 (common Arduino clone) or any available port
+        for p in serial.tools.list_ports.comports():
+            if 'CH340' in p.description or 'Arduino' in p.description or 'USB' in p.description:
+                logger.info(f"Auto-detected Arduino port: {p.device}")
+                return p.device
+        
+        # Fallback: use first available port
+        if ports:
+            logger.warning(f"No Arduino detected, using first available: {ports[0]}")
+            return ports[0]
+        
+        # No ports available
+        logger.warning(f"No serial ports found, defaulting to {config.ARDUINO_PORT}")
+        return config.ARDUINO_PORT
+        
+    except Exception as e:
+        logger.warning(f"Error detecting port: {e}, using default {config.ARDUINO_PORT}")
+        return config.ARDUINO_PORT
 
 def calculate_head_position(ax, ay, az):
+    """Calculate head position angles from accelerometer values"""
     try:
         # PITCH (Up/Down) - Rotation around X-axis
-        # atan2(x, sqrt(y*y + z*z))
         angle_x = math.degrees(math.atan2(ax, math.sqrt(ay**2 + az**2)))
         
         # YAW (Left/Right) - Rotation around Y-axis
-        # atan2(y, sqrt(x*x + z*z))
         angle_y = math.degrees(math.atan2(ay, math.sqrt(ax**2 + az**2)))
         
         # ROLL (Tilt Left/Right) - Rotation around Z-axis
-        angle_z = math.degrees(math.atan2(ay, az))   
+        angle_z = math.degrees(math.atan2(ay, az))
 
         UP_THRESHOLD = 10
         DOWN_THRESHOLD = -10
@@ -95,7 +149,7 @@ def calculate_head_position(ax, ay, az):
         return position, angle_x, angle_y, angle_z
 
     except Exception as e:
-        print(f"[HEAD POSITION ERROR] {e}")
+        logger.error(f"Head position calculation error: {e}", exc_info=True)
         return "Unknown", 0.0, 0.0, 0.0
 
 def update_head_position_data():
@@ -119,58 +173,94 @@ def update_head_position_data():
     return head_position_data
 
 def serial_reader():
-    global latest_sensor_data, sensor_data_history
-    print("[SERIAL] ⏳ Starting Serial Monitor Thread...")
-    
-    while True: # SUPER LOOP: Handles Reconnection
+    """Main serial reading loop with auto-reconnect and fallback to mock data"""
+    connection_attempts = 0
+    last_port = None
+    using_mock_data = False
+    MAX_CONNECTION_ATTEMPTS = 5
+
+    while True:
+        # Auto-detect port on each reconnection attempt
+        port = find_arduino_port()
+        
+        # Log port change
+        if port != last_port:
+            logger.info(f"Attempting connection on {port}...")
+            last_port = port
+        
+        # Switch to mock data after too many failures
+        if connection_attempts >= MAX_CONNECTION_ATTEMPTS and not using_mock_data:
+            logger.warning(f"[FALLBACK] Switching to mock sensor data after {MAX_CONNECTION_ATTEMPTS} failed attempts")
+            using_mock_data = True
+        
+        # Use mock data mode
+        if using_mock_data and config.USE_MOCK_DATA:
+            try:
+                mock_data = generate_mock_sensor_data()
+                with sensor_lock:
+                    latest_sensor_data.update(mock_data)
+                    sensor_data_history.append(latest_sensor_data.copy())
+                time.sleep(1)  # Poll at 1Hz for mock data
+                continue
+            except Exception as e:
+                logger.error(f"Mock data generation error: {e}", exc_info=True)
+                time.sleep(5)
+                continue
+        
+        # Try real serial connection
         ser = None
         try:
-            port = find_arduino_port()
-            print(f"[SERIAL] 🔌 Attempting to connect to {port}...")
-            ser = serial.Serial(port=port, baudrate=115200, timeout=1)
-            print(f"[SERIAL] ✅ Connected to {port}")
+            # Attempt Connection
+            ser = serial.Serial(port=port, baudrate=config.BAUD_RATE, timeout=1)
+            logger.info(f"[OK] Connected to {port}")
+            using_mock_data = False
+            connection_attempts = 0
+            time.sleep(2)  # Stabilize
             
-            # INNER LOOP: Read Data
+            # Reading Loop
             while True:
-                try:
-                    if ser.in_waiting > 0:
-                        line = ser.readline().decode('utf-8', errors='ignore').strip()
-                        if line:
-                            print(f"\n[ARDUINO RAW] >>> {line}")
-                            parsed = parse_raw_sensor_string(line)
-                            if parsed:
-                                timestamp = int(time.time())
-                                with sensor_lock:
-                                    latest_sensor_data.update({**parsed, "timestamp": timestamp})
-                                    sensor_data_history.append(latest_sensor_data.copy())
+                if ser.in_waiting > 0:
+                    line = ser.readline().decode('utf-8', errors='ignore').strip()
+                    if not line:
+                        continue
                     
-                    # --- WATCHDOG: STALE DATA CHECK (Keep Existing Logic) ---
+                    logger.debug(f"Raw data from Arduino: {line}")
+                    print(f"arduino_data: {line}") # Explicit print for console visibility
+                    
+                    parsed = parse_raw_sensor_string(line)
+                    if not parsed:
+                        continue
+
+                    timestamp = int(time.time())
                     with sensor_lock:
-                        last_ts = latest_sensor_data.get("timestamp")
-                        # 5s timeout
-                        if last_ts and (int(time.time()) - last_ts > 5):
-                             print("[SERIAL WATCHDOG] ⚠️ Data Stale (>5s). Resetting Sensor State.")
-                             for k in ["temperature", "hr", "spo2", "ax", "ay", "az"]:
-                                 latest_sensor_data[k] = None
-                             latest_sensor_data["timestamp"] = int(time.time())
-
-                except Exception as read_error:
-                    print(f"[SERIAL READ ERROR] {read_error} -> Reconnecting...")
-                    break # Break Inner Loop -> Trigger Reconnect
+                        latest_sensor_data.update({**parsed, "timestamp": timestamp})
+                        sensor_data_history.append(latest_sensor_data.copy())
                 
-                time.sleep(0.01) # Tiny sleep to save CPU
+                # Prevent CPU hogging
+                time.sleep(0.01)
 
+        except (serial.SerialException, PermissionError) as e:
+            connection_attempts += 1
+            logger.warning(f"[ATTEMPT {connection_attempts}] Serial connection failed: {type(e).__name__}: {e}")
+            
         except Exception as e:
-            print(f"[SERIAL CONNECTION ERROR] {e} -> Retrying in 3s...")
-            time.sleep(3)
-        
+            logger.error(f"[ERROR] Unexpected error in serial reader: {e}", exc_info=True)
+
         finally:
-            if ser and ser.is_open:
-                try:
-                    ser.close()
-                except:
-                    pass
+             if ser:
+                 try:
+                     ser.close()
+                 except Exception as e:
+                     logger.debug(f"Error closing serial port: {e}")
+        
+        # Exponential backoff for reconnection (3s, 6s, 9s, 10s max)
+        retry_delay = min(10, 3 * (connection_attempts // 3 + 1))
+        logger.info(f"Retrying in {retry_delay}s... (will auto-detect available port)")
+        time.sleep(retry_delay)
+
 
 def start_serial_thread():
+    """Start serial reader in background thread"""
     t = threading.Thread(target=serial_reader, daemon=True)
     t.start()
+    logger.info("Serial reader thread started in background")
