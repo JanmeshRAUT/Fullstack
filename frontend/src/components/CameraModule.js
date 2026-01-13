@@ -15,6 +15,7 @@ export default function CameraModule() {
   useEffect(() => {
     let stream;
     let frameInterval;
+    let ws;
 
     async function startCamera() {
       try {
@@ -22,55 +23,73 @@ export default function CameraModule() {
         stream = await navigator.mediaDevices.getUserMedia({ video: true });
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
-          setCameraStatus("Streaming");
+        }
+        
+        // Initialize WebSocket
+        try {
+            const wsBase = API_BASE.replace(/^http/, 'ws');
+            const wsUrl = `${wsBase}/ws/detect`;
+            ws = new WebSocket(wsUrl);
+            console.log("Connecting to WS:", wsUrl);
+            
+            ws.onopen = () => {
+                console.log("WebSocket Connected");
+                setCameraStatus("Streaming");
+                
+                // Start sending frames ONLY when WS is open
+                frameInterval = setInterval(() => {
+                    sendFrameOverSocket(ws);
+                }, 100); // 10 FPS
+            };
+
+            ws.onclose = () => {
+                console.log("WebSocket Disconnected");
+                setCameraStatus("Disconnected");
+            };
+
+            ws.onerror = (err) => {
+                console.error("WebSocket Error:", err);
+                setCameraStatus("Error");
+            };
+
+        } catch (wsErr) {
+            console.error("WS Setup Error:", wsErr);
+            setCameraStatus("Error");
         }
 
-        frameInterval = setInterval(() => {
-          sendFrameToBackend();
-        }, 800);
       } catch (err) {
         console.error("Camera access error:", err);
         setCameraStatus("Error");
       }
     }
 
+    const sendFrameOverSocket = (socket) => {
+        if (!videoRef.current || !canvasRef.current || socket.readyState !== WebSocket.OPEN) return;
+        
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext("2d");
+
+        // OPTIMIZATION: Downscale image to 480px width
+        const scaleFactor = 480 / videoRef.current.videoWidth;
+        canvas.width = 480; 
+        canvas.height = videoRef.current.videoHeight * scaleFactor;
+        
+        ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+
+        // Compress to JPEG 0.5 quality
+        const imageData = canvas.toDataURL("image/jpeg", 0.5);
+        
+        socket.send(imageData);
+    };
+
     startCamera();
 
     return () => {
       if (frameInterval) clearInterval(frameInterval);
+      if (ws) ws.close();
       if (stream) stream.getTracks().forEach((t) => t.stop());
     };
   }, []);
-
-  const sendFrameToBackend = async () => {
-    if (!videoRef.current || !canvasRef.current) return;
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
-
-    // OPTIMIZATION: Downscale image to 480px width to prevent Backend Worker Timeout/Crash
-    const scaleFactor = 480 / videoRef.current.videoWidth;
-    canvas.width = 480; 
-    canvas.height = videoRef.current.videoHeight * scaleFactor;
-    
-    ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-
-    // Compress to JPEG 0.5 quality (further reduces payload size)
-    const imageData = canvas.toDataURL("image/jpeg", 0.5);
-
-    try {
-      const response = await fetch(`${API_BASE}/process_frame`, {
-        method: "POST",
-        headers: { 
-            "Content-Type": "application/json",
-            "ngrok-skip-browser-warning": "69420"
-        },
-        body: JSON.stringify({ image_data: imageData }),
-      });
-      if (!response.ok) throw new Error("Failed");
-    } catch (err) {
-      console.error("Frame send error:", err);
-    }
-  };
 
   return (
     <>

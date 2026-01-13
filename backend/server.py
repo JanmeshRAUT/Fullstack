@@ -1,17 +1,11 @@
-from flask import Flask
-from flask_cors import CORS
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 import threading
+import uvicorn
+from contextlib import asynccontextmanager
+
 from sensors.serial_reader import start_serial_thread
-from routes.api_routes import api_bp
-
-print("[DIAGNOSTIC] Environment OK ✅")
-
-app = Flask(__name__)
-# Enable CORS for ALL domains and ALL headers to prevent blocking
-CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
-
-# Register Blueprints
-app.register_blueprint(api_bp)
+from routes.api_routes import router as api_router
 
 import requests
 import time
@@ -32,10 +26,30 @@ def print_ngrok_url():
     except Exception:
         pass # Ngrok not running or not accessible
 
-if __name__ == '__main__':
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    print("[DIAGNOSTIC] Starting Serial Thread...")
     start_serial_thread()
-    
-    # Start a background thread to print URL so it doesn't block server start
     threading.Thread(target=print_ngrok_url, daemon=True).start()
-    
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    yield
+    # Shutdown logic if needed
+
+print("[DIAGNOSTIC] Environment OK ✅")
+
+app = FastAPI(lifespan=lifespan)
+
+# Enable CORS for ALL domains and ALL headers to prevent blocking
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Register Router
+app.include_router(api_router)
+
+if __name__ == '__main__':
+    uvicorn.run(app, host='0.0.0.0', port=5000)
