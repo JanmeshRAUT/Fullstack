@@ -90,11 +90,57 @@ export const FatigueProvider = ({ children }) => {
         };
     }, []);
 
+    // ---------------- REAL-TIME SOCKET HANDLER ----------------
+    // Updates FAST data (CV: Perclos, HeadPose) without waiting for polling
+    const updateRealTimeData = (wsData) => {
+        setFullData(prev => {
+            if (!prev) return prev; // Wait for initial poll to establish structure
+            
+            // Map WS data structure to FullData structure
+            // WS returns: { ...perclos_fields, head_pose: { pitch, yaw, roll } }
+            // FullData expects: { perclos: {...}, head_position: {...} }
+            
+            const newHeadPose = wsData.head_pose ? {
+                angle_x: wsData.head_pose.pitch,
+                angle_y: wsData.head_pose.yaw,
+                angle_z: wsData.head_pose.roll,
+                position: getPosLabel(wsData.head_pose.pitch, wsData.head_pose.yaw),
+                source: "Vision (WS)",
+                timestamp: Date.now()
+            } : prev.head_position;
+
+            return {
+                ...prev,
+                perclos: {
+                    ...prev.perclos,
+                    ...wsData, // Overwrite perclos fields (status, ear, mar, etc)
+                    timestamp: wsData.timestamp || Date.now()
+                },
+                head_position: newHeadPose
+            };
+        });
+    };
+
+    // Helper for Head Position Label
+    const getPosLabel = (pitch, yaw) => {
+        let v = "";
+        if (pitch > 10) v = "Down";
+        else if (pitch < -10) v = "Up";
+        
+        let h = "";
+        if (yaw > 10) h = "Right";
+        else if (yaw < -10) h = "Left";
+        
+        const pos = `${v} ${h}`.trim();
+        return pos || "Center";
+    };
+
     // ---------------- EXPORT ----------------
     const value = {
         fullData,
         heartRateHistory,
-        tempHistory
+        tempHistory,
+        updateRealTimeData
     };
 
     return (
