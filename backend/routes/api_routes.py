@@ -298,6 +298,15 @@ async def websocket_detect(websocket: WebSocket):
                 # We can return just perclos data or full data? Use process_face_mesh
                 result = process_face_mesh(frame)
                 
+                # INJECT HEAD POSE functionality for WebSocket clients
+                with cv_angles_lock:
+                    result["head_pose"] = {
+                        "pitch": round(cv_head_angles["pitch"], 2),
+                        "yaw": round(cv_head_angles["yaw"], 2),
+                        "roll": round(cv_head_angles["roll"], 2),
+                        "is_calibrated": cv_head_angles.get("is_calibrated", False)
+                    }
+
                 # Send result back
                 await websocket.send_json(result)
                 

@@ -1,10 +1,8 @@
-import React, { useEffect, useRef, useState } from "react";
-import { Wifi, WifiOff, UserMinus } from "lucide-react";
-import { useFatigueData } from "../hooks/useFatigueData";
-import { API_BASE } from "../api";
+import { useFatigueContext } from "../context/FatigueContext"; // Import Context directly for actions
 
 export default function CameraModule() {
   const data = useFatigueData();
+  const { updateRealTimeData } = useFatigueContext(); // Get the updater action
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -40,6 +38,18 @@ export default function CameraModule() {
                 frameInterval = setInterval(() => {
                     sendFrameOverSocket(ws);
                 }, 100); // 10 FPS
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const result = JSON.parse(event.data);
+                    if (result && !result.error) {
+                         // Update global state with fast real-time data
+                         updateRealTimeData(result);
+                    }
+                } catch (e) {
+                    // Ignore parse errors
+                }
             };
 
             ws.onclose = () => {
