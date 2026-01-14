@@ -1,62 +1,70 @@
 import axios from "axios";
 
-// export const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000"; // Backend URL (Vercel ENV or Local)
-export const API_BASE = "https://nulliporous-carbolic-lianne.ngrok-free.dev";
+// Environment Configuration
+export const API_BASE = process.env.REACT_APP_API_URL || "https://nulliporous-carbolic-lianne.ngrok-free.dev";
 
-// BYPASS NGROK WARNING PAGE
-axios.defaults.headers.common['ngrok-skip-browser-warning'] = 'true';
+// Initialize Axios Instance
+// We use a specific instance rather than the global axios object to avoid conflicts/pollution
+const apiClient = axios.create({
+  baseURL: API_BASE,
+  headers: {
+    'Content-Type': 'application/json',
+    'ngrok-skip-browser-warning': 'true'
+  }
+});
+
+// Debug Log
+console.log(`[API] Initialized with Base URL: ${API_BASE}`);
+
+// --- API FUNCTIONS ---
 
 export const getTemperature = async () => {
   try {
-    const res = await axios.get(`${API_BASE}/temperature`);
+    const res = await apiClient.get('/temperature');
     return res.data;
   } catch (err) {
-    console.error("Temperature fetch error:", err);
+    console.error("[API] getTemperature Error:", err);
     return null;
   }
 };
 
 export const getTemperatureHistory = async () => {
   try {
-    const res = await axios.get(`${API_BASE}/temperature/history`);
+    const res = await apiClient.get('/temperature/history');
     return res.data;
   } catch (err) {
-    console.error("Temperature history fetch error:", err);
+    console.error("[API] getTemperatureHistory Error:", err);
     return [];
   }
 };
 
 export const getPerclos = async () => {
   try {
-    const res = await axios.get(`${API_BASE}/perclos`);
+    const res = await apiClient.get('/perclos');
     return res.data;
   } catch (err) {
-    console.error("PERCLOS fetch error:", err);
+    console.error("[API] getPerclos Error:", err);
+    // Return safe fallback object
     return { status: "API Error", perclos: 0.0, timestamp: Date.now() };
   }
 };
 
 export async function getLatestTemperature() {
   try {
-    const response = await fetch(`${API_BASE}/temperature/latest`, {
-        headers: { "ngrok-skip-browser-warning": "true" }
-    });
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return await response.json();
+    const response = await apiClient.get('/temperature/latest');
+    return response.data;
   } catch (error) {
-    console.error("Failed to fetch latest temperature:", error);
+    console.error("[API] getLatestTemperature Error:", error);
     return null;
   }
 }
 
 export const resetCalibration = async () => {
     try {
-        await axios.post(`${API_BASE}/reset_calibration`);
+        await apiClient.post('/reset_calibration');
         return true;
     } catch (err) {
-        console.error("Calibration reset failed:", err);
+        console.error("[API] resetCalibration Error:", err);
         return false;
     }
 };
@@ -64,15 +72,15 @@ export const resetCalibration = async () => {
 export const checkBackendHealth = async () => {
     try {
         const start = Date.now();
-        const res = await axios.get(`${API_BASE}/health`);
+        const res = await apiClient.get('/health');
         const latency = Date.now() - start;
         return { 
             status: "Online", 
             latency, 
-            version: res.data.service 
+            version: res.data.service || "unknown" 
         };
     } catch (err) {
-        console.error("Health check failed:", err);
+        console.error("[API] checkBackendHealth Error:", err);
         return { status: "Offline", latency: 0 };
     }
 };

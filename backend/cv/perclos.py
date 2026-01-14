@@ -13,7 +13,7 @@ RIGHT_EYE = [362, 385, 387, 263, 373, 380]
 EYE_AR_THRESH = 0.30
 MOUTH_INNER = [13, 14, 78, 308]
 MAR_THRESH = 0.6
-MAR_THRESH = 0.6
+
 MAR_FRAME_COUNT = 3
 STABILITY_THRESH = 0.05 # Max allowed normalized movement per frame (5% of screen)
 
@@ -34,6 +34,7 @@ closed_frames_count = 0
 closed_frames_count = 0
 mar_history = deque(maxlen=20)
 prev_nose_pos = None # For motion/shake detection
+yawn_start_time = None # For time-based yawn duration check
 
 # --- MediaPipe Initialization ---
 mp_face_mesh = mp.solutions.face_mesh
@@ -77,7 +78,7 @@ def process_face_mesh(frame):
     Processes a frame using MediaPipe FaceMesh to update PERCLOS, Yawn, and Head Pose.
     Updates global state: perclos_data, cv_head_angles.
     """
-    global perclos_data, eye_status_history, yawn_frames_count, mar_history, closed_frames_count, prev_nose_pos
+    global perclos_data, eye_status_history, yawn_frames_count, mar_history, closed_frames_count, prev_nose_pos, yawn_start_time
     now = int(time.time())
 
     h, w, _ = frame.shape
@@ -133,7 +134,11 @@ def process_face_mesh(frame):
                 print(f"[CV] ✅ Calibration Complete. Personal EAR Thresh: {PERSONAL_EAR_THRESH:.3f} (Avg: {avg_ear:.3f})")
             
             # While calibrating, assume Eyes Open (safe)
-            perclos_data.update({"status": "Calibrating", "ear": round(ear, 3)})
+            perclos_data.update({
+                "status": "Calibrating", 
+                "ear": round(ear, 3),
+                "is_calibrating": True
+            })
             return perclos_data
 
         # LOGIC: If Unstable, Force Eyes 'Open' to prevent False Positive Fatigue
@@ -156,17 +161,29 @@ def process_face_mesh(frame):
         mar = mouth_aspect_ratio(mouth)
         if mar > 0:
             mar_history.append(mar)
+        
+        # Adaptive Thresholding (Simplified)
         mean_mar = np.mean(mar_history) if mar_history else 0.0
-        adaptive_thresh = max(MAR_THRESH, mean_mar * 1.3) if mean_mar > 0 else MAR_THRESH
+        adaptive_thresh_val = max(0.35, mean_mar * 1.3) 
 
-        if mar > adaptive_thresh:
-            yawn_frames_count += 1
-            yawn_status = "Yawning" if yawn_frames_count >= MAR_FRAME_COUNT else "Opening"
+        # --- TIME-BASED YAWN LOGIC ---
+        # Frame skipping makes frame-counting unreliable. We use timestamps.
+        global yawn_start_time
+        
+        if mar > adaptive_thresh_val:
+            if yawn_start_time is None:
+                yawn_start_time = time.time() # Start the clock
+                yawn_status = "Opening"
+            else:
+                elapsed = time.time() - yawn_start_time
+                # 0.8 seconds to confirm it's a yawn and not just talking
+                if elapsed > 0.8: 
+                    yawn_status = "Yawning"
+                else:
+                    yawn_status = "Opening"
         else:
-            yawn_frames_count = max(0, yawn_frames_count - 1)
-            yawn_status = "Closed" if yawn_frames_count == 0 else "Relaxing"
-
-            yawn_status = "Closed" if yawn_frames_count == 0 else "Relaxing"
+            yawn_start_time = None
+            yawn_status = "Closed" if len(mar_history) > 0 else "Relaxing"
 
         status_label = "Closed" if eyes_closed else "Open"
         if not is_stable:
@@ -178,9 +195,10 @@ def process_face_mesh(frame):
             "ear": round(ear, 3),
             "yawn_status": yawn_status,
             "mar": round(mar, 3),
-            "adaptive_mar_thresh": round(adaptive_thresh, 3),
+            "adaptive_mar_thresh": round(adaptive_thresh_val, 3),
             "timestamp": now,
-            "closed_frames": closed_frames_count
+            "closed_frames": closed_frames_count,
+            "is_calibrating": False
         })
     else:
         # No face detected

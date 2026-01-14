@@ -19,16 +19,45 @@ export const FatigueProvider = ({ children }) => {
     // Moved from useSensorData
     const [tempHistory, setTempHistory] = useState([]);
 
+    // --- HISTORY UPDATE EFFECT ---
+    // Update histories whenever fullData changes (Polling or WebSocket)
+    useEffect(() => {
+        if (!fullData) return;
+
+        // 1. Heart Rate History
+        const hr = fullData.sensor?.hr ?? 0;
+        if (hr !== null) {
+                setHeartRateHistory(prev => {
+                    // Avoid duplicate timestamps if possible, or just push
+                    // Since timeTick was local to the loop, we might lose continuity if we switch sources.
+                    // But for now, simple array push is fine.
+                    // Ideally use fullData.server_time or a counter.
+                    const newHrPoint = { time: Date.now(), bpm: hr }; 
+                    const updated = [...prev, newHrPoint];
+                    return updated.slice(-20);
+                });
+        }
+
+        // 2. Temperature History (formatted for Chart)
+        const temp = fullData.sensor?.temperature ?? 0;
+        const newTempPoint = {
+            time: new Date().toLocaleTimeString(),
+            temperature: temp
+        };
+        setTempHistory(prev => {
+            const updated = [...prev, newTempPoint];
+            return updated.slice(-20);
+        });
+
+    }, [fullData]);
+
     // ---------------- POLLING LOOP ----------------
     useEffect(() => {
         let isMounted = true;
-        let timeTick = 0; // Relative time ticker
 
         const fetchData = async () => {
             try {
                 // FETCH ONCE for the entire app!
-                // Combined data contains sensor, perclos, head_position, prediction
-                // Combined data contains sensor, perclos, head_position, prediction
                 const response = await fetch(`${API_BASE}/combined_data`, {
                     headers: {
                         "ngrok-skip-browser-warning": "69420",
@@ -43,45 +72,16 @@ export const FatigueProvider = ({ children }) => {
                     // Inject System Status
                     const richData = { ...json, status: "Active" };
                     setFullData(richData);
-                    
-                    // --- UPDATE HISTORIES ---
-                    // 1. Heart Rate History
-                    const hr = json.sensor?.hr ?? 0;
-                    if (hr !== null) {
-                         const newHrPoint = { time: timeTick, bpm: hr };
-                         setHeartRateHistory(prev => {
-                             // Keep last 20 points
-                             const updated = [...prev, newHrPoint];
-                             return updated.slice(-20);
-                         });
-                    }
-
-                    // 2. Temperature History (formatted for Chart)
-                    const temp = json.sensor?.temperature ?? 0;
-                    const newTempPoint = {
-                        time: new Date().toLocaleTimeString(),
-                        temperature: temp
-                    };
-                    setTempHistory(prev => {
-                        const updated = [...prev, newTempPoint];
-                        return updated.slice(-20);
-                    });
-                    
-                    timeTick += 1;
                 }
             } catch (error) {
                 console.error("[FatigueContext] Fetch Error:", error);
                 if (isMounted) {
-                    // Retain old data but mark as Offline if needed
-                    // Or set a specific offline state
-                     setFullData(prev => ({ ...prev, status: "Offline" }));
+                     setFullData(prev => prev ? ({ ...prev, status: "Offline" }) : null);
                 }
             }
         };
 
         // Poll at 500ms (2Hz) - Good balance for Head Pose smoothness & Data Freshness
-        // Previously: Sensor=3s, HR=2s, Head=100ms(!), Fatigue=1s
-        // 100ms for Head was too aggressive for HTTP. 200-500ms is standard for HTTP polling.
         const interval = setInterval(fetchData, 500); 
 
         return () => {
@@ -93,6 +93,7 @@ export const FatigueProvider = ({ children }) => {
     // ---------------- EXPORT ----------------
     const value = {
         fullData,
+        setFullData, // Exposed for WebSocket updates
         heartRateHistory,
         tempHistory
     };
